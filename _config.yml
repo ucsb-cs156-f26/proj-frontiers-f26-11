@@ -23,4 +23,4 @@ repo_name: "TBD"
 repo: ucsb-cs156-f26/proj-frontiers-f26-11
 owner: ucsb-cs156-f26
 repo_name: proj-frontiers-f26-11
-pull_requests: [{"author":{"id":"U_kgDODg2-Fw","is_bot":false,"login":"nrrevell","name":""},"headRefName":"nr-delete-repos-p1","number":25,"title":"update RepositoryService to use pagination","url":"https://github.com/ucsb-cs156-f26/proj-frontiers-f26-11/pull/25"},{"author":{"id":"U_kgDOBcz3Iw","is_bot":false,"login":"IciStorm","name":""},"headRefName":"BS-ChromaticStorybookRebuild","number":24,"title":"BS - Fix Storybook Generation When Latest Commit Lacks Frontend Changes","url":"https://github.com/ucsb-cs156-f26/proj-frontiers-f26-11/pull/24"}]
+pull_requests: [{"author":{"id":"U_kgDODg2-Fw","is_bot":false,"login":"nrrevell","name":""},"headRefName":"nr-delete-repos-p1","number":25,"title":"update RepositoryService to use pagination","url":"https://github.com/ucsb-cs156-f26/proj-frontiers-f26-11/pull/25"}]
