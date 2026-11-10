@@ -171,28 +171,30 @@ public class TeamCsvService {
     }
     int rows = columns.stream().mapToInt(List::size).max().orElse(0);
 
-    try (CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
-      List<String> header = new ArrayList<>();
+    // try (CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
+    CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT);
+    List<String> header = new ArrayList<>();
+    for (int c = 0; c < columns.size(); c++) {
+      if (c > 0) {
+        header.add("");
+      }
+      header.addAll(headerCells);
+    }
+    csvPrinter.printRecord(header);
+
+    for (int r = 0; r < rows; r++) {
+      List<String> row = new ArrayList<>();
       for (int c = 0; c < columns.size(); c++) {
         if (c > 0) {
-          header.add("");
+          row.add("");
         }
-        header.addAll(headerCells);
+        List<List<String>> column = columns.get(c);
+        row.addAll(r < column.size() ? column.get(r) : blanks);
       }
-      csvPrinter.printRecord(header);
-
-      for (int r = 0; r < rows; r++) {
-        List<String> row = new ArrayList<>();
-        for (int c = 0; c < columns.size(); c++) {
-          if (c > 0) {
-            row.add("");
-          }
-          List<List<String>> column = columns.get(c);
-          row.addAll(r < column.size() ? column.get(r) : blanks);
-        }
-        csvPrinter.printRecord(row);
-      }
+      csvPrinter.printRecord(row);
     }
+    // }
+    csvPrinter.flush();
   }
 
   /**
@@ -266,6 +268,30 @@ public class TeamCsvService {
       layout.add(rows);
     }
     writeColumnsCsv(writer, List.of("Team", "Name"), layout);
+  }
+
+  // THE ONE IM WORKING ON DESPITE BEING IDENTICAL TO WRITETEAMTEABLECSV
+  /**
+   * Writes the combined out put of name2team and teamtable
+   *
+   * @param writer where to write the CSV
+   * @param entries the entries, in order
+   * @param columns not actually used but the way the backend calls it it's easier to leave it here
+   * @throws IOException if writing fails
+   * @throws IllegalArgumentException if columns is less than 1
+   */
+  public void writeFormattedTeamsCsv(Writer writer, List<NameAndTeam> entries, int columns)
+      throws IOException {
+    List<List<List<String>>> layout = new ArrayList<>();
+    final int num_rows = 24;
+    int name_columns = Math.max((entries.size() / num_rows) + 1, 2);
+
+    writer.write("by name" + ",".repeat(name_columns - 1) + "\r\n");
+    writeName2TeamCsv(writer, entries, name_columns);
+
+    final int team_columns = 4;
+    writer.write("by team" + ",".repeat(team_columns - 1) + "\r\n");
+    writeTeamTableCsv(writer, entries, team_columns);
   }
 
   private static String join(String first, String lastPart) {
