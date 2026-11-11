@@ -930,7 +930,7 @@ public class RepositoryServiceTests {
         """;
 
     mockRestServiceServer
-        .expect(requestTo("https://api.github.com/orgs/ucsb-cs156/repos?per_page=100"))
+        .expect(requestTo("https://api.github.com/orgs/ucsb-cs156/repos?per_page=100&page=1"))
         .andExpect(header("Authorization", "Bearer real.installation.token"))
         .andExpect(header("Accept", "application/vnd.github+json"))
         .andExpect(header("X-GitHub-Api-Version", "2022-11-28"))
@@ -958,7 +958,7 @@ public class RepositoryServiceTests {
         """;
 
     mockRestServiceServer
-        .expect(requestTo("https://api.github.com/orgs/ucsb-cs156/repos?per_page=100"))
+        .expect(requestTo("https://api.github.com/orgs/ucsb-cs156/repos?per_page=100&page=1"))
         .andExpect(header("Authorization", "Bearer real.installation.token"))
         .andExpect(header("Accept", "application/vnd.github+json"))
         .andExpect(header("X-GitHub-Api-Version", "2022-11-28"))
@@ -975,7 +975,7 @@ public class RepositoryServiceTests {
   @Test
   public void getRepositoriesMatchingPrefix_propagates_github_api_errors() {
     mockRestServiceServer
-        .expect(requestTo("https://api.github.com/orgs/ucsb-cs156/repos?per_page=100"))
+        .expect(requestTo("https://api.github.com/orgs/ucsb-cs156/repos?per_page=100&page=1"))
         .andExpect(header("Authorization", "Bearer real.installation.token"))
         .andExpect(header("Accept", "application/vnd.github+json"))
         .andExpect(header("X-GitHub-Api-Version", "2022-11-28"))
@@ -986,6 +986,35 @@ public class RepositoryServiceTests {
         HttpClientErrorException.class,
         () -> repositoryService.getRepositoriesMatchingPrefix(course, "lab01"));
     mockRestServiceServer.verify();
+  }
+
+  @Test
+  public void getRepositoriesMatchingPrefix_follows_pagination_across_pages() throws Exception {
+    mockRestServiceServer
+        .expect(requestTo("https://api.github.com/orgs/ucsb-cs156/repos?per_page=100&page=1"))
+        .andExpect(method(HttpMethod.GET))
+        .andRespond(withSuccess(repoPageJson("lab01", 100), MediaType.APPLICATION_JSON));
+
+    mockRestServiceServer
+        .expect(requestTo("https://api.github.com/orgs/ucsb-cs156/repos?per_page=100&page=2"))
+        .andExpect(method(HttpMethod.GET))
+        .andRespond(withSuccess(repoPageJson("lab01", 37), MediaType.APPLICATION_JSON));
+
+    List<RepositoryService.GithubRepository> repos =
+        repositoryService.getRepositoriesMatchingPrefix(course, "lab01");
+
+    assertEquals(137, repos.size());
+    mockRestServiceServer.verify(); // fails if page 2 was never requested
+  }
+
+  /** Builds one page of GitHub's "list org repos" response with {@code count} repos. */
+  private String repoPageJson(String prefix, int count) {
+    var page = objectMapper.createArrayNode();
+    for (int i = 0; i < count; i++) {
+      String name = prefix + "-student" + i;
+      page.addObject().put("name", name).put("full_name", "ucsb-cs156/" + name);
+    }
+    return page.toString();
   }
 
   @Test
