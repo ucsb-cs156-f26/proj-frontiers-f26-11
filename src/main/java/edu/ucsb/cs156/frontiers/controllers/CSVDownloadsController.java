@@ -4,12 +4,14 @@ import com.opencsv.bean.StatefulBeanToCsv;
 import com.opencsv.exceptions.CsvDataTypeMismatchException;
 import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
 import edu.ucsb.cs156.frontiers.entities.Course;
+import edu.ucsb.cs156.frontiers.entities.CourseStaff;
 import edu.ucsb.cs156.frontiers.entities.RosterStudent;
 import edu.ucsb.cs156.frontiers.enums.RosterStatus;
 import edu.ucsb.cs156.frontiers.errors.EntityNotFoundException;
 import edu.ucsb.cs156.frontiers.models.NameAndTeam;
 import edu.ucsb.cs156.frontiers.models.RosterStudentDTO;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
+import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.repositories.RosterStudentRepository;
 import edu.ucsb.cs156.frontiers.services.RosterStudentDTOService;
 import edu.ucsb.cs156.frontiers.services.SectionTranslationService;
@@ -50,11 +52,50 @@ public class CSVDownloadsController extends ApiController {
 
   @Autowired private RosterStudentDTOService rosterStudentDTOService;
 
+  @Autowired private CourseStaffRepository courseStaffRepository;
+
   @Autowired private RosterStudentRepository rosterStudentRepository;
 
   @Autowired private SectionTranslationService sectionTranslationService;
 
   @Autowired private TeamCsvService teamCsvService;
+
+  @Operation(
+      summary = "Download CSV File of Course Staff",
+      description = "Returns a CSV file containing course staff")
+  // TODO: ADD REMAINING CSV STUFF FROM BELOW
+  @GetMapping(value = "/coursestaff", produces = "text/csv")
+  @PreAuthorize("@CourseSecurity.hasInstructorPermissions(#root, #courseId)")
+  public ResponseEntity<StreamingResponseBody> courseStaffCsv(
+      @Parameter(name = "courseId", description = "course id", example = "1") @RequestParam
+          Long courseId)
+      throws EntityNotFoundException {
+    Course course =
+        courseRepository
+            .findById(courseId)
+            .orElseThrow(() -> new EntityNotFoundException(Course.class, courseId));
+    StreamingResponseBody stream =
+        (outputStream) -> {
+          Iterable<CourseStaff> staff = courseStaffRepository.findByCourseId(courseId);
+          try (Writer writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
+              CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
+            csvPrinter.printRecord("firstName", "lastName", "email");
+            for (CourseStaff member : staff) {
+              csvPrinter.printRecord(
+                  member.getFirstName(), member.getLastName(), member.getEmail());
+            }
+          }
+        };
+
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
+            String.format("attachment;filename=%s_coursestaff.csv", course.getCourseName()))
+        .header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
+        .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION)
+        .body(stream);
+  }
 
   @Operation(
       summary = "Download CSV File of Roster Students",
