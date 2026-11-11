@@ -343,19 +343,35 @@ public class RepositoryService {
   public List<GithubRepository> getRepositoriesMatchingPrefix(Course course, String prefix)
       throws NoSuchAlgorithmException, InvalidKeySpecException, JsonProcessingException {
     String token = jwtService.getInstallationToken(course);
-    String endpoint = "https://api.github.com/orgs/" + course.getOrgName() + "/repos?per_page=100";
 
     HttpEntity<String> entity = new HttpEntity<>(githubHeaders(token));
-    ResponseEntity<String> response =
-        restTemplate.exchange(endpoint, HttpMethod.GET, entity, String.class);
 
-    JsonNode repos = mapper.readTree(response.getBody());
     List<GithubRepository> matchingRepos = new ArrayList<>();
-    for (JsonNode repo : repos) {
-      String name = repo.path("name").asText();
-      if (name.startsWith(prefix)) {
-        matchingRepos.add(new GithubRepository(name, repo.path("full_name").asText()));
+    int page = 1;
+    while (true) {
+      String endpoint =
+          "https://api.github.com/orgs/"
+              + course.getOrgName()
+              + "/repos?per_page="
+              + 100
+              + "&page="
+              + page;
+
+      ResponseEntity<String> response =
+          restTemplate.exchange(endpoint, HttpMethod.GET, entity, String.class);
+
+      JsonNode repos = mapper.readTree(response.getBody());
+      for (JsonNode repo : repos) {
+        String name = repo.path("name").asText();
+        if (name.startsWith(prefix)) {
+          matchingRepos.add(new GithubRepository(name, repo.path("full_name").asText()));
+        }
       }
+
+      if (repos.size() < 100) {
+        break;
+      }
+      page++;
     }
     return matchingRepos;
   }
