@@ -801,7 +801,6 @@ describe("StaffTabComponent Tests", () => {
     );
   });
 
-
   test("Download Staff CSV button links to the download endpoint", async () => {
     axiosMock
       .onGet("/api/coursestaff/course?courseId=1")
@@ -828,7 +827,6 @@ describe("StaffTabComponent Tests", () => {
       "/api/csv/coursestaff?courseId=1",
     );
   });
-
 
   test("Create Staff Member Modals closes on close button", async () => {
     const download = vi.fn();
