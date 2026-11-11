@@ -801,7 +801,12 @@ describe("StaffTabComponent Tests", () => {
     );
   });
 
-  test("for coming soon tooltip on disabled download CSV button", async () => {
+
+  test("Download Staff CSV button links to the download endpoint", async () => {
+    axiosMock
+      .onGet("/api/coursestaff/course?courseId=1")
+      .reply(200, courseStaffFixtures.threeStaff);
+
     render(
       <QueryClientProvider client={queryClient}>
         <StaffTabComponent
@@ -812,23 +817,18 @@ describe("StaffTabComponent Tests", () => {
       </QueryClientProvider>,
     );
 
-    // Wait for table to render
-    await waitFor(() => {
-      expect(
-        screen.getByTestId(`${testId}-CourseStaffTable`),
-      ).toBeInTheDocument();
-    });
+    const downloadCsvButton = await screen.findByTestId(
+      `${testId}-download-csv-button`,
+    );
 
-    // Download CSV button (no testId, but can find by text)
-    const downloadCsvButton = screen.getByText("Download Staff CSV");
-    expect(downloadCsvButton).toBeDisabled();
-    expect(downloadCsvButton).toHaveStyle("pointerEvents: none");
-    fireEvent.mouseOver(downloadCsvButton);
-
-    await waitFor(() => {
-      expect(screen.getByText("Coming Soon")).toBeInTheDocument();
-    });
+    expect(downloadCsvButton).toBeInTheDocument();
+    expect(downloadCsvButton).toHaveTextContent("Download Staff CSV");
+    expect(downloadCsvButton).toHaveAttribute(
+      "href",
+      "/api/csv/coursestaff?courseId=1",
+    );
   });
+
 
   test("Create Staff Member Modals closes on close button", async () => {
     const download = vi.fn();
