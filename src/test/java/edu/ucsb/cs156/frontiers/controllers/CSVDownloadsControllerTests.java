@@ -759,6 +759,7 @@ public class CSVDownloadsControllerTests extends ControllerTestCase {
         response.getResponse().getHeader("Content-Disposition"));
     assertEquals("text/csv; charset=UTF-8", response.getResponse().getContentType());
   }
+
   // COURSE STAFF TESTS
   @Test
   @WithMockUser(roles = {"ADMIN"})

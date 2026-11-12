@@ -1,13 +1,10 @@
-import React, { useState } from "react";
 import axios from "axios";
 import CourseDownloadsForm from "../Courses/CourseDownloadsForm";
 import { toast } from "react-toastify";
 
 export default function DownloadsTabComponent({ courseId, testIdPrefix }) {
-  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleSubmit = async () => {
-    setIsDownloading(true);
     try {
       const response = await axios.get("/api/csv/formattedteams", {
         params: { courseId },
@@ -29,8 +26,6 @@ export default function DownloadsTabComponent({ courseId, testIdPrefix }) {
     } catch (error) {
       console.error("CSV download error:", error);
       toast.error("Failed to download the CSV. Please try again.");
-    } finally {
-      setIsDownloading(false);
     }
   };
 
@@ -38,7 +33,6 @@ export default function DownloadsTabComponent({ courseId, testIdPrefix }) {
     <div data-testid={`${testIdPrefix}-downloadsTab`}>
       <CourseDownloadsForm
         downloadAction={handleSubmit}
-        isDownloading={isDownloading}
         testIdPrefix={testIdPrefix}
       />
     </div>
