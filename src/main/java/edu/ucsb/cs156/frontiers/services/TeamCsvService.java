@@ -282,16 +282,37 @@ public class TeamCsvService {
    */
   public void writeFormattedTeamsCsv(Writer writer, List<NameAndTeam> entries, int columns)
       throws IOException {
-    List<List<List<String>>> layout = new ArrayList<>();
+    // List<List<List<String>>> layout = new ArrayList<>();
     final int num_rows = 24;
-    int name_columns = Math.max((entries.size() / num_rows) + 1, 2);
+    int name_columns = (int) Math.ceil(entries.size() / (float) num_rows);
 
     writer.write("by name" + ",".repeat(name_columns - 1) + "\r\n");
-    writeName2TeamCsv(writer, entries, name_columns);
+    // writeName2TeamCsv(writer, entries, name_columns);
 
-    final int team_columns = 4;
+    // altered layoutColumns that doesn't fill
+    // int base = items.size() / columns; // ie number of rows
+    // int extra = items.size() % columns; // ie number of columns that get an extra row.
+    List<List<NameAndTeam>> name_column_list = new ArrayList<>();
+    int start = 0;
+    for (int c = 0; c < name_columns; c++) {
+      int size =
+          Math.min(
+              entries.size() - start,
+              num_rows); // should just do num_rows every time until the last column
+      name_column_list.add(entries.subList(start, start + size));
+      start += size;
+    }
+    // altered writeName2TeamCsv where it doesn't fill
+    List<List<List<String>>> layout = new ArrayList<>();
+    for (List<NameAndTeam> column : name_column_list) {
+      layout.add(column.stream().map(e -> List.of(e.name(), e.team())).toList());
+    }
+    writeColumnsCsv(writer, List.of("Name", "Team"), layout);
+
+    int team_columns = 4;
     writer.write("by team" + ",".repeat(team_columns - 1) + "\r\n");
     writeTeamTableCsv(writer, entries, team_columns);
+    // writer.write("name_columns: " + name_columns + "\nentries.size(): " + entries.size() + "\n");
   }
 
   private static String join(String first, String lastPart) {

@@ -427,4 +427,156 @@ public class TeamCsvServiceTests {
         IllegalArgumentException.class, () -> service.writeTeamTableCsv(writer, List.of(), 0));
     assertEquals("", writer.toString());
   }
+
+  // writeFormattedTeamsCsv
+
+  private String formattedTeamsCsv(List<NameAndTeam> entries, int columns) throws Exception {
+    StringWriter writer = new StringWriter();
+    service.writeFormattedTeamsCsv(writer, entries, columns);
+    return writer.toString().replace("\r\n", "\n");
+  }
+
+  @Test
+  public void writeFormattedTeamsCsv_single_column_and_four_below() throws Exception {
+    String expected =
+        """
+        by name
+        Name,Team
+        Abhijeet,s26-14
+        Aiden,s26-06
+        Alex L,s26-03
+        by team,,,
+        Team,Name,,Team,Name,,Team,Name,,Team,Name
+        s26-03,Alex L,,s26-06,Aiden,,s26-14,Abhijeet,,,
+        """;
+    assertEquals(
+        expected,
+        formattedTeamsCsv(
+            List.of(nt("Abhijeet", "s26-14"), nt("Aiden", "s26-06"), nt("Alex L", "s26-03")), 1));
+  }
+
+  @Test
+  public void writeFormattedTeamsCsv_two_columns_when_larger_input() throws Exception {
+    String expected =
+        """
+        by name,
+        Name,Team,,Name,Team
+        a,s26-01,,y,s26-01
+        b,s26-01,,z,s26-01
+        c,s26-01,,,
+        d,s26-01,,,
+        e,s26-01,,,
+        f,s26-01,,,
+        g,s26-01,,,
+        h,s26-01,,,
+        i,s26-01,,,
+        j,s26-01,,,
+        k,s26-01,,,
+        l,s26-01,,,
+        m,s26-01,,,
+        n,s26-01,,,
+        o,s26-01,,,
+        p,s26-01,,,
+        q,s26-01,,,
+        r,s26-01,,,
+        s,s26-01,,,
+        t,s26-01,,,
+        u,s26-01,,,
+        v,s26-01,,,
+        w,s26-01,,,
+        x,s26-01,,,
+        by team,,,
+        Team,Name,,Team,Name,,Team,Name,,Team,Name
+        s26-01,a,,,,,,,,,
+        s26-01,b,,,,,,,,,
+        s26-01,c,,,,,,,,,
+        s26-01,d,,,,,,,,,
+        s26-01,e,,,,,,,,,
+        s26-01,f,,,,,,,,,
+        s26-01,g,,,,,,,,,
+        s26-01,h,,,,,,,,,
+        s26-01,i,,,,,,,,,
+        s26-01,j,,,,,,,,,
+        s26-01,k,,,,,,,,,
+        s26-01,l,,,,,,,,,
+        s26-01,m,,,,,,,,,
+        s26-01,n,,,,,,,,,
+        s26-01,o,,,,,,,,,
+        s26-01,p,,,,,,,,,
+        s26-01,q,,,,,,,,,
+        s26-01,r,,,,,,,,,
+        s26-01,s,,,,,,,,,
+        s26-01,t,,,,,,,,,
+        s26-01,u,,,,,,,,,
+        s26-01,v,,,,,,,,,
+        s26-01,w,,,,,,,,,
+        s26-01,x,,,,,,,,,
+        s26-01,y,,,,,,,,,
+        s26-01,z,,,,,,,,,
+        """;
+    assertEquals(
+        expected,
+        formattedTeamsCsv(
+            List.of(
+                nt("a", "s26-01"),
+                nt("b", "s26-01"),
+                nt("c", "s26-01"),
+                nt("d", "s26-01"),
+                nt("e", "s26-01"),
+                nt("f", "s26-01"),
+                nt("g", "s26-01"),
+                nt("h", "s26-01"),
+                nt("i", "s26-01"),
+                nt("j", "s26-01"),
+                nt("k", "s26-01"),
+                nt("l", "s26-01"),
+                nt("m", "s26-01"),
+                nt("n", "s26-01"),
+                nt("o", "s26-01"),
+                nt("p", "s26-01"),
+                nt("q", "s26-01"),
+                nt("r", "s26-01"),
+                nt("s", "s26-01"),
+                nt("t", "s26-01"),
+                nt("u", "s26-01"),
+                nt("v", "s26-01"),
+                nt("w", "s26-01"),
+                nt("x", "s26-01"),
+                nt("y", "s26-01"),
+                nt("z", "s26-01")),
+            1));
+  }
+
+  @Test
+  public void writeFormattedTeamsCsv_teams_properly_grouped() throws Exception {
+    String expected =
+        """
+        by name
+        Name,Team
+        Abhijeet,s26-01
+        Aiden,s26-01
+        Alex L,s26-03
+        Bourgeoisie,s26-04
+        Zach H,s26-11
+        Tyler,s26-03
+        Evan G,s26-03
+        by team,,,
+        Team,Name,,Team,Name,,Team,Name,,Team,Name
+        s26-01,Abhijeet,,s26-03,Alex L,,s26-04,Bourgeoisie,,s26-11,Zach H
+        s26-01,Aiden,,s26-03,Tyler,,,,,,
+        "",,,s26-03,Evan G,,,,,,
+        """;
+    assertEquals(
+        expected,
+        formattedTeamsCsv(
+            List.of(
+                nt("Abhijeet", "s26-01"),
+                nt("Aiden", "s26-01"),
+                nt("Alex L", "s26-03"),
+                nt("Bourgeoisie", "s26-04"),
+                nt("Zach H", "s26-11"),
+                nt("Tyler", "s26-03"),
+                nt("Evan G", "s26-03")),
+            1));
+  }
 }
