@@ -8,29 +8,29 @@ import coursesFixtures from "fixtures/coursesFixtures";
 import * as useBackendModule from "main/utils/useBackend";
 
 const axiosMock = new AxiosMockAdapter(axios);
-const mockToast = vi.fn();
-
-const useBackendMutationSpy = vi.spyOn(useBackendModule, "useBackendMutation");
-
-vi.mock("react-toastify", async (importOriginal) => {
-  return {
-    ...(await importOriginal()),
-    toast: (x) => mockToast(x),
-  };
+const { mockToast } = vi.hoisted(() => {
+  const mockToast = vi.fn();
+  mockToast.error = vi.fn();
+  return { mockToast };
 });
 
-describe("DownloadsTabComponent tests", () => {
+vi.mock("react-toastify", async (importOriginal) => {
+  const original = await importOriginal();
+  return { ...original, toast: mockToast };
+});
+
+describe("DownloadsTabComponent", () => {
   beforeEach(() => {
-    axiosMock.resetHistory();
-    mockToast.mockClear();
+    vi.clearAllMocks();
+    window.URL.createObjectURL = vi.fn(() => "blob:mock-url");
+    window.URL.revokeObjectURL = vi.fn();
   });
 
-  afterEach(() => {
-    useBackendMutationSpy.mockClear();
-  });
+  test("downloads the CSV and shows a success toast on button click", async () => {
+    axiosMock
+      .onGet("/api/csv/formattedteams")
+      .reply(200, "team,members\nA,Alice\n");
 
-  test("Downloads tab component and form elements render correctly", async () => {
-    axiosMock.onGet("/api/courses/downloadStudentsCSV").reply(200);
     const client = new QueryClient();
     render(
       <QueryClientProvider client={client}>
@@ -41,45 +41,45 @@ describe("DownloadsTabComponent tests", () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByTestId("InstructorCourseShowPage-downloadsTab");
-
-    expect(screen.getByText("Course Downloads")).toBeInTheDocument();
-    expect(
-      screen.getByTestId("InstructorCourseShowPage-downloads-header"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByTestId("InstructorCourseShowPage-btn-download-students-csv"),
-    ).toBeInTheDocument();
-  });
-
-  test("Fires submit download handler cleanly on button click", async () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    axiosMock.onGet("/api/courses/downloadStudentsCSV").reply(200);
-    const client = new QueryClient();
-    render(
-      <QueryClientProvider client={client}>
-        <DownloadsTabComponent
-          courseId={coursesFixtures.severalCourses[0].id}
-          testIdPrefix="InstructorCourseShowPage"
-        />
-      </QueryClientProvider>,
-    );
-
-    await screen.findByTestId(
-      "InstructorCourseShowPage-btn-download-students-csv",
-    );
-
-    const submitButton = screen.getByTestId(
+    const submitButton = await screen.findByTestId(
       "InstructorCourseShowPage-btn-download-students-csv",
     );
     fireEvent.click(submitButton);
 
-    await waitFor(() => expect(mockToast).toHaveBeenCalled());
-    expect(mockToast).toBeCalledWith("Download successfully initiated.");
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Frontend form submit action captured for course: 1",
+    await waitFor(() =>
+      expect(mockToast).toHaveBeenCalledWith(
+        "Download successfully initiated.",
+      ),
     );
-    consoleSpy.mockRestore();
+    expect(window.URL.createObjectURL).toHaveBeenCalled();
+    expect(axiosMock.history.get[0].params).toEqual({
+      courseId: coursesFixtures.severalCourses[0].id,
+    });
+  });
+
+  test("shows an error toast when the request fails", async () => {
+    axiosMock.onGet("/api/csv/formattedteams").reply(500);
+
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <DownloadsTabComponent
+          courseId={1}
+          testIdPrefix="InstructorCourseShowPage"
+        />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(
+      await screen.findByTestId(
+        "InstructorCourseShowPage-btn-download-students-csv",
+      ),
+    );
+
+    await waitFor(() =>
+      expect(mockToast.error).toHaveBeenCalledWith(
+        "Failed to download the CSV. Please try again.",
+      ),
+    );
   });
 });
