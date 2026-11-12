@@ -194,7 +194,7 @@ public class TeamCsvService {
       csvPrinter.printRecord(row);
     }
     // }
-    csvPrinter.flush();
+    // csvPrinter.flush();
   }
 
   /**
