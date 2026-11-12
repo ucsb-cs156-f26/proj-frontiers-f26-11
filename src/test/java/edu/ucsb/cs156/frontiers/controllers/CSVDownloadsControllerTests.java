@@ -15,6 +15,7 @@ import edu.ucsb.cs156.frontiers.ControllerTestCase;
 import edu.ucsb.cs156.frontiers.annotations.WithInstructorCoursePermissions;
 import edu.ucsb.cs156.frontiers.entities.Course;
 import edu.ucsb.cs156.frontiers.entities.CourseOption;
+import edu.ucsb.cs156.frontiers.entities.CourseStaff;
 import edu.ucsb.cs156.frontiers.entities.RosterStudent;
 import edu.ucsb.cs156.frontiers.entities.Section;
 import edu.ucsb.cs156.frontiers.enums.OrgStatus;
@@ -23,6 +24,7 @@ import edu.ucsb.cs156.frontiers.enums.School;
 import edu.ucsb.cs156.frontiers.models.RosterStudentDTO;
 import edu.ucsb.cs156.frontiers.repositories.CourseOptionRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
+import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.repositories.RosterStudentRepository;
 import edu.ucsb.cs156.frontiers.repositories.SectionRepository;
 import edu.ucsb.cs156.frontiers.services.RosterStudentDTOService;
@@ -57,6 +59,8 @@ public class CSVDownloadsControllerTests extends ControllerTestCase {
 
   @MockitoBean(answers = Answers.RETURNS_MOCKS)
   RosterStudentRepository rosterStudentRepository;
+
+  @MockitoBean CourseStaffRepository courseStaffRepository;
 
   @MockitoBean CourseOptionRepository courseOptionRepository;
 
@@ -171,6 +175,99 @@ public class CSVDownloadsControllerTests extends ControllerTestCase {
     verify(rosterStudentDTOService, times(1)).getStatefulBeanToCSV(any());
 
     assertEquals(expectedResponse, response.getResponse().getContentAsString());
+  }
+
+  @Test
+  @WithMockUser(roles = {"ADMIN"})
+  public void test_coursestaff_no_such_course() throws Exception {
+
+    // arrange
+
+    when(courseRepository.findById(eq(1L))).thenReturn(Optional.empty());
+
+    // act
+
+    MvcResult response = mockMvc.perform(get("/api/csv/coursestaff?courseId=1")).andReturn();
+
+    // assert
+    String actualResponse = response.getResponse().getContentAsString();
+
+    Map<String, String> errorResponse =
+        objectMapper.readValue(actualResponse, new TypeReference<Map<String, String>>() {});
+    Map<String, String> expectedResponse =
+        Map.of("message", "Course with id 1 not found", "type", "EntityNotFoundException");
+    assertEquals(expectedResponse, errorResponse);
+    assertEquals(HttpStatus.NOT_FOUND.value(), response.getResponse().getStatus());
+  }
+
+  @Test
+  @WithMockUser(roles = {"USER"})
+  public void test_coursestaff_forbidden_for_non_instructor() throws Exception {
+
+    // act
+
+    MvcResult response = mockMvc.perform(get("/api/csv/coursestaff?courseId=1")).andReturn();
+
+    // assert
+
+    assertEquals(HttpStatus.FORBIDDEN.value(), response.getResponse().getStatus());
+  }
+
+  @Test
+  @DirtiesContext(methodMode = DirtiesContext.MethodMode.BEFORE_METHOD)
+  @WithInstructorCoursePermissions
+  public void test_coursestaff_csv_success() throws Exception {
+    Course course =
+        Course.builder()
+            .id(1L)
+            .courseName("ucsb-cs156-s25")
+            .term("S25")
+            .school(School.UCSB)
+            .build();
+
+    CourseStaff staff1 =
+        CourseStaff.builder()
+            .id(1L)
+            .firstName("Dr. John")
+            .lastName("Professor")
+            .email("johnprof@ucsb.edu")
+            .course(course)
+            .build();
+
+    CourseStaff staff2 =
+        CourseStaff.builder()
+            .id(2L)
+            .firstName("Dr. Jane")
+            .lastName("Instructor")
+            .email("janeinstr@ucsb.edu")
+            .course(course)
+            .build();
+
+    doReturn(Optional.of(course)).when(courseRepository).findById(eq(1L));
+    doReturn(List.of(staff1, staff2)).when(courseStaffRepository).findByCourseId(eq(1L));
+
+    String expectedResponse =
+        """
+            firstName,lastName,email
+            Dr. John,Professor,johnprof@ucsb.edu
+            Dr. Jane,Instructor,janeinstr@ucsb.edu
+            """;
+
+    MvcResult response =
+        mockMvc
+            .perform(get("/api/csv/coursestaff?courseId=1"))
+            .andExpect(request().asyncStarted())
+            .andDo(MvcResult::getAsyncResult)
+            .andExpect(status().isOk())
+            .andReturn();
+
+    verify(courseStaffRepository, times(1)).findByCourseId(eq(1L));
+
+    assertEquals(
+        expectedResponse, response.getResponse().getContentAsString().replace("\r\n", "\n"));
+    assertEquals(
+        "attachment;filename=ucsb-cs156-s25_staff.csv",
+        response.getResponse().getHeader("Content-Disposition"));
   }
 
   @Test
