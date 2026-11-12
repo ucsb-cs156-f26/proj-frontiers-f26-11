@@ -3,7 +3,6 @@ import CourseDownloadsForm from "../Courses/CourseDownloadsForm";
 import { toast } from "react-toastify";
 
 export default function DownloadsTabComponent({ courseId, testIdPrefix }) {
-
   const handleSubmit = async () => {
     try {
       const response = await axios.get("/api/csv/formattedteams", {
