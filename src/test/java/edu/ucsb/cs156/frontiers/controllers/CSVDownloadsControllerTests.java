@@ -685,4 +685,75 @@ public class CSVDownloadsControllerTests extends ControllerTestCase {
     assertEquals(
         expectedResponse, response.getResponse().getContentAsString().replace("\r\n", "\n"));
   }
+
+  // formatted teams
+  @Test
+  @WithMockUser(roles = {"ADMIN"})
+  public void test_formattedteams_no_such_course() throws Exception {
+    when(courseRepository.findById(eq(1L))).thenReturn(Optional.empty());
+
+    MvcResult response = mockMvc.perform(get("/api/csv/formattedteams?courseId=1")).andReturn();
+
+    Map<String, String> errorResponse =
+        objectMapper.readValue(
+            response.getResponse().getContentAsString(),
+            new TypeReference<Map<String, String>>() {});
+    Map<String, String> expectedResponse =
+        Map.of("message", "Course with id 1 not found", "type", "EntityNotFoundException");
+    assertEquals(expectedResponse, errorResponse);
+    assertEquals(HttpStatus.NOT_FOUND.value(), response.getResponse().getStatus());
+    verify(rosterStudentRepository, never())
+        .findByCourseIdAndRosterStatusInOrderByFirstNameAscLastNameAscIgnoreCase(any(), any());
+  }
+
+  @Test
+  @WithMockUser(roles = {"ADMIN"})
+  public void test_formattedteams_returns_expected() throws Exception {
+    Course course = Course.builder().id(1L).courseName("ucsb-cs156-s26").build();
+    doReturn(Optional.of(course)).when(courseRepository).findById(eq(1L));
+    doReturn(name2TeamStudents())
+        .when(rosterStudentRepository)
+        .findByCourseIdAndRosterStatusInOrderByFirstNameAscLastNameAscIgnoreCase(
+            eq(1L), eq(List.of(RosterStatus.ROSTER, RosterStatus.MANUAL)));
+
+    // Teams in name order: s26-01, s26-02, s26-03, s26-04, s26-07, s26-09, s26-10, then the
+    // unassigned student. 8 groups over 4 columns is 2 groups per column.
+    String expectedResponse =
+        """
+            by name
+            Name,Team
+            Alex L,s26-03
+            Alex Y,s26-10
+            Alexander,s26-07
+            David Chang,s26-07
+            David Chen,s26-02
+            Pat Smith*,s26-01
+            Pat Smith*,s26-04
+            Ritam,s26-09
+            Zoe,
+            by team,,,
+            Team,Name,,Team,Name,,Team,Name,,Team,Name
+            s26-01,Pat Smith*,,s26-03,Alex L,,s26-07,Alexander,,s26-10,Alex Y
+            s26-02,David Chen,,s26-04,Pat Smith*,,s26-07,David Chang,,,Zoe
+            "",,,,,,s26-09,Ritam,,,
+            """;
+
+    MvcResult response =
+        mockMvc
+            .perform(get("/api/csv/formattedteams?courseId=1"))
+            .andExpect(request().asyncStarted())
+            .andDo(MvcResult::getAsyncResult)
+            .andExpect(status().isOk())
+            .andReturn();
+
+    verify(rosterStudentRepository, times(1))
+        .findByCourseIdAndRosterStatusInOrderByFirstNameAscLastNameAscIgnoreCase(
+            eq(1L), eq(List.of(RosterStatus.ROSTER, RosterStatus.MANUAL)));
+    assertEquals(
+        expectedResponse, response.getResponse().getContentAsString().replace("\r\n", "\n"));
+    assertEquals(
+        "attachment;filename=ucsb-cs156-s26_formatted_teams_1.csv",
+        response.getResponse().getHeader("Content-Disposition"));
+    assertEquals("text/csv; charset=UTF-8", response.getResponse().getContentType());
+  }
 }

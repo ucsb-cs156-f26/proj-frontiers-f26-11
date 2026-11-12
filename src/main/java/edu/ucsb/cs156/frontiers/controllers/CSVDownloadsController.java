@@ -258,7 +258,8 @@ public class CSVDownloadsController extends ApiController {
           Long courseId)
       throws EntityNotFoundException {
     final int columns = 1;
-    return teamCsvResponse(courseId, columns, "teamtable", teamCsvService::writeFormattedTeamsCsv);
+    return teamCsvResponse(
+        courseId, columns, ("formatted_teams_" + courseId), teamCsvService::writeFormattedTeamsCsv);
   }
 
   /** Writes one of the compact team CSV tables from a list of abbreviated names and teams. */
