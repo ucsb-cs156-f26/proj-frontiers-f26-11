@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DeleteRepoJob.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">frontiers</a> &gt; <a href="index.source.html" class="el_package">edu.ucsb.cs156.frontiers.jobs</a> &gt; <span class="el_source">DeleteRepoJob.java</span></div><h1>DeleteRepoJob.java</h1><pre class="source lang-java linenums">package edu.ucsb.cs156.frontiers.jobs;
+
+import edu.ucsb.cs156.frontiers.entities.Course;
+import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
+import edu.ucsb.cs156.frontiers.services.RepositoryService;
+import edu.ucsb.cs156.frontiers.services.RepositoryService.GithubRepository;
+import edu.ucsb.cs156.jobs.services.JobContext;
+import edu.ucsb.cs156.jobs.services.JobContextConsumer;
+import java.util.List;
+import java.util.Optional;
+import lombok.Builder;
+
+@Builder
+public class DeleteRepoJob implements JobContextConsumer {
+  Long courseId;
+  String prefix;
+  CourseRepository courseRepository;
+  RepositoryService repositoryService;
+
+  // Pause between deleting repositories to avoid ratelimit
+  public static final long DEFAULT_DELAY_MILLIS = 1000L;
+  // Tests can set this to zero to avoid waiting
+  @Builder.Default long delayMillis = DEFAULT_DELAY_MILLIS;
+
+  /** Pauses the job. Injectable so tests can observe the delay without actually waiting. */
+  @FunctionalInterface
+  public interface Sleeper {
+    void sleep(long millis) throws InterruptedException;
+  }
+
+  @Builder.Default Sleeper sleeper = Thread::sleep;
+
+  @Override
+  public String getScopeType() {
+<span class="fc" id="L35">    return &quot;course&quot;;</span>
+  }
+
+  @Override
+  public Long getScopeId() {
+<span class="fc" id="L40">    return courseId;</span>
+  }
+
+  @Override
+  public void accept(JobContext ctx) throws Exception {
+<span class="fc" id="L45">    ctx.log(String.format(&quot;Starting delete repository job for course ID: %s&quot;, courseId));</span>
+<span class="fc" id="L46">    ctx.log(String.format(&quot;prefix=%s&quot;, prefix));</span>
+
+<span class="fc" id="L48">    Optional&lt;Course&gt; courseOpt = courseRepository.findById(courseId);</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">    if (courseOpt.isEmpty()) {</span>
+<span class="fc" id="L50">      ctx.log(String.format(&quot;ERROR: Course with ID %s not found&quot;, courseId));</span>
+<span class="fc" id="L51">      return;</span>
+    }
+
+<span class="fc" id="L54">    Course course = courseOpt.get();</span>
+<span class="fc bfc" id="L55" title="All 4 branches covered.">    if (course.getOrgName() == null || course.getInstallationId() == null) {</span>
+<span class="fc" id="L56">      ctx.log(&quot;ERROR: Course has no linked GitHub organization&quot;);</span>
+<span class="fc" id="L57">      return;</span>
+    }
+
+    List&lt;GithubRepository&gt; repositories;
+<span class="fc" id="L61">    int errors = 0;</span>
+    try {
+<span class="fc" id="L63">      repositories = repositoryService.getRepositoriesMatchingPrefix(course, prefix);</span>
+<span class="fc" id="L64">    } catch (Exception e) {</span>
+<span class="fc" id="L65">      ctx.log(String.format(&quot;ERROR: Failed to list repositories: %s&quot;, e.getMessage()));</span>
+<span class="fc" id="L66">      errors++;</span>
+<span class="fc" id="L67">      logSummary(ctx, 0, 0, 0, errors);</span>
+<span class="fc" id="L68">      return;</span>
+<span class="fc" id="L69">    }</span>
+
+<span class="fc" id="L71">    int deleted = 0;</span>
+<span class="fc" id="L72">    int retained = 0;</span>
+
+<span class="fc bfc" id="L74" title="All 2 branches covered.">    for (int i = 0; i &lt; repositories.size(); i++) {</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">      if (i &gt; 0) {</span>
+<span class="fc" id="L76">        pause();</span>
+      }
+<span class="fc" id="L78">      GithubRepository repository = repositories.get(i);</span>
+      try {
+<span class="fc" id="L80">        boolean deletedRepository =</span>
+<span class="fc" id="L81">            repositoryService.deleteRepositoryIfEmpty(course, repository.name());</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">        if (deletedRepository) {</span>
+<span class="fc" id="L83">          deleted++;</span>
+<span class="fc" id="L84">          ctx.log(String.format(&quot;Deleted empty repository: %s&quot;, repository.name()));</span>
+        } else {
+<span class="fc" id="L86">          retained++;</span>
+<span class="fc" id="L87">          ctx.log(String.format(&quot;Retained repository with commits: %s&quot;, repository.name()));</span>
+        }
+<span class="fc" id="L89">      } catch (Exception e) {</span>
+<span class="fc" id="L90">        errors++;</span>
+<span class="fc" id="L91">        ctx.log(</span>
+<span class="fc" id="L92">            String.format(</span>
+                &quot;ERROR: Failed to delete/check repository %s: %s&quot;,
+<span class="fc" id="L94">                repository.name(), e.getMessage()));</span>
+<span class="fc" id="L95">      }</span>
+    }
+
+<span class="fc" id="L98">    logSummary(ctx, repositories.size(), deleted, retained, errors);</span>
+<span class="fc" id="L99">    ctx.log(&quot;Done&quot;);</span>
+<span class="fc" id="L100">  }</span>
+
+  private void pause() throws InterruptedException {
+<span class="fc bfc" id="L103" title="All 2 branches covered.">    if (delayMillis &gt; 0) {</span>
+<span class="fc" id="L104">      sleeper.sleep(delayMillis);</span>
+    }
+<span class="fc" id="L106">  }</span>
+
+  private static void logSummary(JobContext ctx, int found, int deleted, int retained, int errors) {
+
+<span class="fc" id="L110">    ctx.log(</span>
+<span class="fc" id="L111">        String.format(</span>
+<span class="fc" id="L112">            &quot;Summary: %d repos deleted, %d repos retained, %d errors&quot;, deleted, retained, errors));</span>
+<span class="fc" id="L113">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
