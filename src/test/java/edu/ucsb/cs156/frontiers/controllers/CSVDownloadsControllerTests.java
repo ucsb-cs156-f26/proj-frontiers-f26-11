@@ -15,6 +15,7 @@ import edu.ucsb.cs156.frontiers.ControllerTestCase;
 import edu.ucsb.cs156.frontiers.annotations.WithInstructorCoursePermissions;
 import edu.ucsb.cs156.frontiers.entities.Course;
 import edu.ucsb.cs156.frontiers.entities.CourseOption;
+import edu.ucsb.cs156.frontiers.entities.CourseStaff;
 import edu.ucsb.cs156.frontiers.entities.RosterStudent;
 import edu.ucsb.cs156.frontiers.entities.Section;
 import edu.ucsb.cs156.frontiers.enums.OrgStatus;
@@ -23,6 +24,7 @@ import edu.ucsb.cs156.frontiers.enums.School;
 import edu.ucsb.cs156.frontiers.models.RosterStudentDTO;
 import edu.ucsb.cs156.frontiers.repositories.CourseOptionRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
+import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.repositories.RosterStudentRepository;
 import edu.ucsb.cs156.frontiers.repositories.SectionRepository;
 import edu.ucsb.cs156.frontiers.services.RosterStudentDTOService;
@@ -54,6 +56,8 @@ public class CSVDownloadsControllerTests extends ControllerTestCase {
 
   @MockitoBean(answers = Answers.RETURNS_MOCKS)
   CourseRepository courseRepository;
+
+  @MockitoBean CourseStaffRepository courseStaffRepository;
 
   @MockitoBean(answers = Answers.RETURNS_MOCKS)
   RosterStudentRepository rosterStudentRepository;
@@ -745,7 +749,6 @@ public class CSVDownloadsControllerTests extends ControllerTestCase {
             .andDo(MvcResult::getAsyncResult)
             .andExpect(status().isOk())
             .andReturn();
-
     verify(rosterStudentRepository, times(1))
         .findByCourseIdAndRosterStatusInOrderByFirstNameAscLastNameAscIgnoreCase(
             eq(1L), eq(List.of(RosterStatus.ROSTER, RosterStatus.MANUAL)));
@@ -755,5 +758,118 @@ public class CSVDownloadsControllerTests extends ControllerTestCase {
         "attachment;filename=ucsb-cs156-s26_formatted_teams_1.csv",
         response.getResponse().getHeader("Content-Disposition"));
     assertEquals("text/csv; charset=UTF-8", response.getResponse().getContentType());
+  }
+  // COURSE STAFF TESTS
+  @Test
+  @WithMockUser(roles = {"ADMIN"})
+  public void test_coursestaff_download_nonexistent_course() throws Exception {
+    // arrange
+    when(courseRepository.findById(eq(1L))).thenReturn(Optional.empty());
+
+    // act
+    MvcResult response = mockMvc.perform(get("/api/csv/coursestaff?courseId=1")).andReturn();
+
+    // assert
+    String actualResponse = response.getResponse().getContentAsString();
+
+    Map<String, String> errorResponse =
+        objectMapper.readValue(actualResponse, new TypeReference<Map<String, String>>() {});
+
+    Map<String, String> expectedResponse =
+        Map.of("message", "Course with id 1 not found", "type", "EntityNotFoundException");
+
+    assertEquals(expectedResponse, errorResponse);
+    assertEquals(HttpStatus.NOT_FOUND.value(), response.getResponse().getStatus());
+
+    verify(courseStaffRepository, never()).findByCourseId(any());
+  }
+
+  @Test
+  @WithInstructorCoursePermissions
+  public void test_coursestaff_csv_download_existing_course() throws Exception {
+    // arrange
+    Course course =
+        Course.builder()
+            .id(1L)
+            .courseName("ucsb-cs156-s26")
+            .term("S26")
+            .school(School.UCSB)
+            .build();
+
+    CourseStaff jane = mock(CourseStaff.class);
+    when(jane.getFirstName()).thenReturn("Jane");
+    when(jane.getLastName()).thenReturn("Doe");
+    when(jane.getEmail()).thenReturn("jane.doe@example.com");
+
+    CourseStaff john = mock(CourseStaff.class);
+    when(john.getFirstName()).thenReturn("John");
+    when(john.getLastName()).thenReturn("Smith");
+    when(john.getEmail()).thenReturn("john.smith@example.com");
+
+    doReturn(Optional.of(course)).when(courseRepository).findById(eq(1L));
+    doReturn(List.of(jane, john)).when(courseStaffRepository).findByCourseId(eq(1L));
+
+    String expectedResponse =
+        """
+        firstName,lastName,email
+        Jane,Doe,jane.doe@example.com
+        John,Smith,john.smith@example.com
+        """;
+
+    // act
+    MvcResult response =
+        mockMvc
+            .perform(get("/api/csv/coursestaff?courseId=1"))
+            .andExpect(request().asyncStarted())
+            .andDo(MvcResult::getAsyncResult)
+            .andExpect(status().isOk())
+            .andReturn();
+    // assert
+    verify(courseStaffRepository, times(1)).findByCourseId(eq(1L));
+
+    assertEquals(
+        expectedResponse, response.getResponse().getContentAsString().replace("\r\n", "\n"));
+
+    assertEquals(
+        "attachment;filename=ucsb-cs156-s26_coursestaff.csv",
+        response.getResponse().getHeader("Content-Disposition"));
+
+    assertEquals("text/csv; charset=UTF-8", response.getResponse().getContentType());
+  }
+
+  @Test
+  @WithInstructorCoursePermissions
+  public void test_coursestaff_csv_download_empty_course() throws Exception {
+    // arrange
+    Course course =
+        Course.builder()
+            .id(1L)
+            .courseName("ucsb-cs156-s26")
+            .term("S26")
+            .school(School.UCSB)
+            .build();
+
+    doReturn(Optional.of(course)).when(courseRepository).findById(eq(1L));
+    doReturn(List.of()).when(courseStaffRepository).findByCourseId(eq(1L));
+
+    String expectedResponse =
+        """
+        firstName,lastName,email
+        """;
+
+    // act
+    MvcResult response =
+        mockMvc
+            .perform(get("/api/csv/coursestaff?courseId=1"))
+            .andExpect(request().asyncStarted())
+            .andDo(MvcResult::getAsyncResult)
+            .andExpect(status().isOk())
+            .andReturn();
+
+    // assert
+    assertEquals(
+        expectedResponse, response.getResponse().getContentAsString().replace("\r\n", "\n"));
+
+    verify(courseStaffRepository, times(1)).findByCourseId(eq(1L));
   }
 }
