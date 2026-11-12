@@ -6,7 +6,7 @@ import AxiosMockAdapter from "axios-mock-adapter";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import CourseEmailsCard from "main/components/Emails/CourseEmailsCard";
-import { EMAIL_FORMATS } from "main/utils/courseEmailsUtils";
+import { EMAIL_FORMATS, EMAIL_TYPES } from "main/utils/courseEmailsUtils";
 
 const mockToast = vi.fn();
 vi.mock("react-toastify", async (importOriginal) => {
@@ -22,8 +22,15 @@ const emailsUrl = "/api/courses/emails";
 const emailsGetHistory = () =>
   axiosMock.history.get.filter((request) => request.url === emailsUrl);
 
-const onePerLine = "a@ucsb.edu\r\nb@ucsb.edu\r\nc@ucsb.edu";
-const commaSeparated = "a@ucsb.edu,b@ucsb.edu,c@ucsb.edu";
+const staffEmails = "staff1@ucsb.edu\r\nstaff2@ucsb.edu\r\nstaff3@ucsb.edu";
+const staffEmailsCommaSeparated =
+  "staff1@ucsb.edu,staff2@ucsb.edu,staff3@ucsb.edu";
+const studentEmails =
+  "student1@ucsb.edu\r\nstudent2@ucsb.edu\r\nstudent3@ucsb.edu";
+const studentEmailsCommaSeparated =
+  "student1@ucsb.edu,student2@ucsb.edu,student3@ucsb.edu";
+const allEmails =
+  "staff1@ucsb.edu\r\nstaff2@ucsb.edu\r\nstaff3@ucsb.edu\r\nstudent1@ucsb.edu\r\nstudent2@ucsb.edu\r\nstudent3@ucsb.edu";
 
 const renderCard = (props = {}) => {
   const queryClient = new QueryClient();
@@ -40,11 +47,19 @@ describe("CourseEmailsCard tests", () => {
     axiosMock.resetHistory();
     mockToast.mockClear();
     axiosMock.onGet(emailsUrl).reply((config) => {
+      const { type, format } = config.params;
+
+      const emailsByType = {
+        STAFF: staffEmails,
+        STUDENTS: studentEmails,
+        ALL: allEmails,
+      };
+
+      const emails = emailsByType[type] || "";
+
       return [
         200,
-        config.params.format === "COMMA_SEPARATED"
-          ? commaSeparated
-          : onePerLine,
+        format === "COMMA_SEPARATED" ? emails.replace(/\r\n/g, ",") : emails,
       ];
     });
   });
@@ -97,7 +112,7 @@ describe("CourseEmailsCard tests", () => {
     expect(textarea).toHaveValue("");
 
     await waitFor(() =>
-      expect(textarea).toHaveValue("a@ucsb.edu\nb@ucsb.edu\nc@ucsb.edu"),
+      expect(textarea).toHaveValue(staffEmails.replace(/\r\n/g, "\n")),
     );
   });
 
@@ -125,14 +140,16 @@ describe("CourseEmailsCard tests", () => {
     renderCard();
     const textarea = screen.getByTestId(`${testId}-emails`);
     await waitFor(() =>
-      expect(textarea).toHaveValue("a@ucsb.edu\nb@ucsb.edu\nc@ucsb.edu"),
+      expect(textarea).toHaveValue(staffEmails.replace(/\r\n/g, "\n")),
     );
 
     fireEvent.change(screen.getByTestId(`${testId}-format`), {
       target: { value: "COMMA_SEPARATED" },
     });
 
-    await waitFor(() => expect(textarea).toHaveValue(commaSeparated));
+    await waitFor(() =>
+      expect(textarea).toHaveValue(staffEmailsCommaSeparated),
+    );
     expect(emailsGetHistory().length).toBe(2);
     expect(emailsGetHistory()[1].params).toEqual({
       courseId: 7,
@@ -147,7 +164,7 @@ describe("CourseEmailsCard tests", () => {
       target: { value: "ONE_PER_LINE" },
     });
     await waitFor(() =>
-      expect(textarea).toHaveValue("a@ucsb.edu\nb@ucsb.edu\nc@ucsb.edu"),
+      expect(textarea).toHaveValue(staffEmails.replace(/\r\n/g, "\n")),
     );
   });
 
@@ -165,7 +182,7 @@ describe("CourseEmailsCard tests", () => {
       expect(mockToast).toHaveBeenCalledWith("Emails copied to the clipboard."),
     );
     expect(mockToast).toHaveBeenCalledTimes(1);
-    expect(await navigator.clipboard.readText()).toBe(onePerLine);
+    expect(await navigator.clipboard.readText()).toBe(staffEmails);
   });
 
   test("the Copy button copies the comma separated format when that is selected", async () => {
@@ -177,14 +194,16 @@ describe("CourseEmailsCard tests", () => {
     });
     await waitFor(() =>
       expect(screen.getByTestId(`${testId}-emails`)).toHaveValue(
-        commaSeparated,
+        staffEmailsCommaSeparated,
       ),
     );
 
     await user.click(screen.getByTestId(`${testId}-copy`));
 
     await waitFor(() => expect(mockToast).toHaveBeenCalled());
-    expect(await navigator.clipboard.readText()).toBe(commaSeparated);
+    expect(await navigator.clipboard.readText()).toBe(
+      staffEmailsCommaSeparated,
+    );
   });
 
   test("says so when the emails cannot be copied", async () => {
@@ -230,11 +249,160 @@ describe("CourseEmailsCard tests", () => {
   });
 
   test("uses a custom testIdPrefix", () => {
-    renderCard({ testIdPrefix: "Custom" });
+    renderCard({ showTypeDropdown: true, testIdPrefix: "Custom" });
 
     expect(screen.getByTestId("Custom-card")).toBeInTheDocument();
+    expect(screen.getByTestId("Custom-type")).toBeInTheDocument();
     expect(screen.getByTestId("Custom-format")).toBeInTheDocument();
     expect(screen.getByTestId("Custom-emails")).toBeInTheDocument();
     expect(screen.getByTestId("Custom-copy")).toBeInTheDocument();
+  });
+
+  test("does not show the type dropdown by default", () => {
+    renderCard();
+
+    expect(screen.queryByTestId(`${testId}-type`)).not.toBeInTheDocument();
+  });
+
+  test("shows the type dropdown when showTypeDropdown is true", () => {
+    renderCard({ showTypeDropdown: true });
+
+    const select = screen.getByTestId(`${testId}-type`);
+
+    expect(screen.getByLabelText("Type")).toBe(select);
+    expect(select).toHaveValue("STAFF");
+  });
+
+  test("the type dropdown offers Students, Staff, and All, in that order", () => {
+    renderCard({ showTypeDropdown: true });
+
+    const select = screen.getByTestId(`${testId}-type`);
+    expect(screen.getByLabelText("Type")).toBe(select);
+    expect(select).toHaveValue("STAFF");
+    const options = Array.from(select.querySelectorAll("option")).map((o) => [
+      o.value,
+      o.textContent,
+    ]);
+    expect(options).toEqual([
+      ["STUDENTS", "Students"],
+      ["STAFF", "Staff"],
+      ["ALL", "All"],
+    ]);
+    expect(EMAIL_TYPES.map((f) => f.value)).toEqual([
+      "STUDENTS",
+      "STAFF",
+      "ALL",
+    ]);
+  });
+
+  test("choosing another type refetches emails and shows the result", async () => {
+    renderCard({ showTypeDropdown: true });
+
+    const textarea = screen.getByTestId(`${testId}-emails`);
+
+    await waitFor(() =>
+      expect(textarea).toHaveValue(staffEmails.replace(/\r\n/g, "\n")),
+    );
+
+    fireEvent.change(screen.getByTestId(`${testId}-type`), {
+      target: { value: "STUDENTS" },
+    });
+
+    await waitFor(() =>
+      expect(textarea).toHaveValue(studentEmails.replace(/\r\n/g, "\n")),
+    );
+
+    expect(emailsGetHistory().length).toBe(2);
+
+    expect(emailsGetHistory()[1].params).toEqual({
+      courseId: 7,
+      type: "STUDENTS",
+      format: "ONE_PER_LINE",
+    });
+
+    expect(screen.getByTestId(`${testId}-type`)).toHaveValue("STUDENTS");
+
+    fireEvent.change(screen.getByTestId(`${testId}-type`), {
+      target: { value: "ALL" },
+    });
+
+    await waitFor(() =>
+      expect(textarea).toHaveValue(allEmails.replace(/\r\n/g, "\n")),
+    );
+
+    expect(emailsGetHistory().length).toBe(3);
+
+    expect(emailsGetHistory()[2].params).toEqual({
+      courseId: 7,
+      type: "ALL",
+      format: "ONE_PER_LINE",
+    });
+
+    expect(screen.getByTestId(`${testId}-type`)).toHaveValue("ALL");
+  });
+
+  test("changing type preserves the selected format", async () => {
+    renderCard({ showTypeDropdown: true });
+
+    const textarea = screen.getByTestId(`${testId}-emails`);
+
+    fireEvent.change(screen.getByTestId(`${testId}-format`), {
+      target: { value: "COMMA_SEPARATED" },
+    });
+
+    await waitFor(() =>
+      expect(textarea).toHaveValue(staffEmailsCommaSeparated),
+    );
+
+    fireEvent.change(screen.getByTestId(`${testId}-type`), {
+      target: { value: "STUDENTS" },
+    });
+
+    await waitFor(() =>
+      expect(textarea).toHaveValue(studentEmailsCommaSeparated),
+    );
+
+    expect(screen.getByTestId(`${testId}-format`)).toHaveValue(
+      "COMMA_SEPARATED",
+    );
+
+    expect(emailsGetHistory()[2].params).toEqual({
+      courseId: 7,
+      type: "STUDENTS",
+      format: "COMMA_SEPARATED",
+    });
+  });
+
+  test("changing format preserves the selected type", async () => {
+    renderCard({ showTypeDropdown: true });
+
+    const textarea = screen.getByTestId(`${testId}-emails`);
+
+    fireEvent.change(screen.getByTestId(`${testId}-type`), {
+      target: { value: "STUDENTS" },
+    });
+    fireEvent.change(screen.getByTestId(`${testId}-format`), {
+      target: { value: "COMMA_SEPARATED" },
+    });
+
+    await waitFor(() =>
+      expect(textarea).toHaveValue(studentEmailsCommaSeparated),
+    );
+
+    fireEvent.change(screen.getByTestId(`${testId}-format`), {
+      target: { value: "ONE_PER_LINE" },
+    });
+
+    await waitFor(() =>
+      expect(textarea).toHaveValue(studentEmails.replace(/\r\n/g, "\n")),
+    );
+
+    expect(screen.getByTestId(`${testId}-type`)).toHaveValue("STUDENTS");
+
+    expect(emailsGetHistory()[3].params).toEqual({
+      courseId: 7,
+      type: "STUDENTS",
+      format: "ONE_PER_LINE",
+    });
   });
 });
