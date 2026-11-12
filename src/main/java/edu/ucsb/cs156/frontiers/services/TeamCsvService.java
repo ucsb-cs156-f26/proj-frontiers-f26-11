@@ -282,16 +282,11 @@ public class TeamCsvService {
    */
   public void writeFormattedTeamsCsv(Writer writer, List<NameAndTeam> entries, int columns)
       throws IOException {
-    // List<List<List<String>>> layout = new ArrayList<>();
     final int num_rows = 24;
     int name_columns = (int) Math.ceil(entries.size() / (float) num_rows);
 
     writer.write("by name" + ",".repeat(name_columns - 1) + "\r\n");
-    // writeName2TeamCsv(writer, entries, name_columns);
-
     // altered layoutColumns that doesn't fill
-    // int base = items.size() / columns; // ie number of rows
-    // int extra = items.size() % columns; // ie number of columns that get an extra row.
     List<List<NameAndTeam>> name_column_list = new ArrayList<>();
     int start = 0;
     for (int c = 0; c < name_columns; c++) {
