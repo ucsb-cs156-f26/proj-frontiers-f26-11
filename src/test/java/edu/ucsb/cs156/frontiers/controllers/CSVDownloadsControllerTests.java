@@ -724,23 +724,25 @@ public class CSVDownloadsControllerTests extends ControllerTestCase {
     // unassigned student. 8 groups over 4 columns is 2 groups per column.
     String expectedResponse =
         """
-            by name
-            Name,Team
-            Alex L,s26-03
-            Alex Y,s26-10
-            Alexander,s26-07
-            David Chang,s26-07
-            David Chen,s26-02
-            Pat Smith*,s26-01
-            Pat Smith*,s26-04
-            Ritam,s26-09
-            Zoe,
-            by team,,,
-            Team,Name,,Team,Name,,Team,Name,,Team,Name
-            s26-01,Pat Smith*,,s26-03,Alex L,,s26-07,Alexander,,s26-10,Alex Y
-            s26-02,David Chen,,s26-04,Pat Smith*,,s26-07,David Chang,,,Zoe
-            "",,,,,,s26-09,Ritam,,,
-            """;
+        by name
+        Name,Team
+        Alex L,s26-03
+        Alex Y,s26-10
+        Alexander,s26-07
+        David Chang,s26-07
+        David Chen,s26-02
+        Pat Smith*,s26-01
+        Pat Smith*,s26-04
+        Ritam,s26-09
+        Zoe,
+        by team,
+        Team,Name,,Team,Name
+        s26-01,Pat Smith*,,s26-07,Alexander
+        s26-02,David Chen,,s26-07,David Chang
+        s26-03,Alex L,,s26-09,Ritam
+        s26-04,Pat Smith*,,s26-10,Alex Y
+        "",,,,Zoe
+        """;
 
     MvcResult response =
         mockMvc
