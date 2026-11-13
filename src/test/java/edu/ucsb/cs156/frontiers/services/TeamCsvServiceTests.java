@@ -235,6 +235,13 @@ public class TeamCsvServiceTests {
         List.of(List.of("A", "B"), List.of("C")), service.layoutRows(List.of("A", "B", "C"), 2));
   }
 
+  @Test
+  public void layoutRows_single_row_expands_columns() {
+    assertEquals(
+        List.of(List.of("A"), List.of("B"), List.of("C")),
+        service.layoutRows(List.of("A", "B", "C"), 1));
+  }
+
   // writeColumnsCsv
 
   private String columnsCsv(List<String> header, List<List<List<String>>> columns)
