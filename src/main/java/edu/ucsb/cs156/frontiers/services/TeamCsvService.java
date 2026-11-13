@@ -165,8 +165,6 @@ public class TeamCsvService {
     if (rows < 1) {
       throw new IllegalArgumentException("rows must be at least 1");
     }
-    // int base = items.size() / rows;
-    // int extra = items.size() % rows;
     List<List<T>> result = new ArrayList<>();
     int start = 0;
     int size = 0;
@@ -201,7 +199,6 @@ public class TeamCsvService {
     }
     int rows = columns.stream().mapToInt(List::size).max().orElse(0);
 
-    // try (CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
     CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT);
     List<String> header = new ArrayList<>();
     for (int c = 0; c < columns.size(); c++) {
@@ -223,8 +220,6 @@ public class TeamCsvService {
       }
       csvPrinter.printRecord(row);
     }
-    // }
-    // csvPrinter.flush();
   }
 
   /**
@@ -317,16 +312,6 @@ public class TeamCsvService {
     int name_columns = (int) Math.ceil(entries.size() / (float) num_rows);
 
     writer.write("by name" + ",".repeat(name_columns - 1) + "\r\n");
-    // List<List<NameAndTeam>> name_column_list = layoutRows(entries, num_rows);
-    // int start = 0;
-    // for (int c = 0; c < name_columns; c++) {
-    //   int size =
-    //       Math.min(
-    //           entries.size() - start,
-    //           num_rows); // should just do num_rows every time until the last column
-    //   name_column_list.add(entries.subList(start, start + size));
-    //   start += size;
-    // }
 
     List<List<List<String>>> layout = new ArrayList<>();
     for (List<NameAndTeam> column : layoutRows(entries, num_rows)) {
@@ -342,8 +327,6 @@ public class TeamCsvService {
     writer.write("by team" + ",".repeat(team_columns - 1) + "\r\n");
 
     layout.clear();
-    // List<List<List<String>>> layout = new ArrayList<>();
-    // List<List<NameAndTeam team_column_list
     for (List<List<NameAndTeam>> column : layoutRows(organized_teams, teams_per_column)) {
       List<List<String>> rows = new ArrayList<>();
       for (List<NameAndTeam> team : column) {
@@ -354,7 +337,6 @@ public class TeamCsvService {
       layout.add(rows);
     }
     writeColumnsCsv(writer, List.of("Team", "Name"), layout);
-    // writer.write("name_columns: " + name_columns + "\nentries.size(): " + entries.size() + "\n");
   }
 
   private static String join(String first, String lastPart) {
