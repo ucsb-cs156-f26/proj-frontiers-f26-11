@@ -219,6 +219,22 @@ public class TeamCsvServiceTests {
     assertEquals(List.of(List.of(), List.of()), service.layoutColumns(List.of(), 2));
   }
 
+  // layoutRows
+  @Test
+  public void layoutRows_rejects_less_than_one_column() {
+    List<String> items = List.of("A");
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, () -> service.layoutRows(items, 0));
+    assertEquals("rows must be at least 1", e.getMessage());
+    assertThrows(IllegalArgumentException.class, () -> service.layoutRows(items, -1));
+  }
+
+  @Test
+  public void layoutRows_flood_fills() {
+    assertEquals(
+        List.of(List.of("A", "B"), List.of("C")), service.layoutRows(List.of("A", "B", "C"), 2));
+  }
+
   // writeColumnsCsv
 
   private String columnsCsv(List<String> header, List<List<List<String>>> columns)
