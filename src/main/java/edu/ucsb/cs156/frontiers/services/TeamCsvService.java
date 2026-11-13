@@ -304,8 +304,13 @@ public class TeamCsvService {
     }
     writeColumnsCsv(writer, List.of("Name", "Team"), layout);
 
-    int team_columns = 4;
+    // I don't like calling groupByTeam twice but I think this is the best way without altering
+    // everything else
+    final int teams_per_column = 4;
+    int num_teams = groupByTeam(entries).size();
+    int team_columns = (int) Math.ceil(num_teams / (float) teams_per_column);
     writer.write("by team" + ",".repeat(team_columns - 1) + "\r\n");
+
     writeTeamTableCsv(writer, entries, team_columns);
     // writer.write("name_columns: " + name_columns + "\nentries.size(): " + entries.size() + "\n");
   }

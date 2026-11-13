@@ -437,7 +437,7 @@ public class TeamCsvServiceTests {
   }
 
   @Test
-  public void writeFormattedTeamsCsv_single_column_and_four_below() throws Exception {
+  public void writeFormattedTeamsCsv_writes_single_column() throws Exception {
     String expected =
         """
         by name
@@ -445,9 +445,11 @@ public class TeamCsvServiceTests {
         Abhijeet,s26-14
         Aiden,s26-06
         Alex L,s26-03
-        by team,,,
-        Team,Name,,Team,Name,,Team,Name,,Team,Name
-        s26-03,Alex L,,s26-06,Aiden,,s26-14,Abhijeet,,,
+        by team
+        Team,Name
+        s26-03,Alex L
+        s26-06,Aiden
+        s26-14,Abhijeet
         """;
     assertEquals(
         expected,
@@ -485,34 +487,34 @@ public class TeamCsvServiceTests {
         v,s26-01,,,
         w,s26-01,,,
         x,s26-01,,,
-        by team,,,
-        Team,Name,,Team,Name,,Team,Name,,Team,Name
-        s26-01,a,,,,,,,,,
-        s26-01,b,,,,,,,,,
-        s26-01,c,,,,,,,,,
-        s26-01,d,,,,,,,,,
-        s26-01,e,,,,,,,,,
-        s26-01,f,,,,,,,,,
-        s26-01,g,,,,,,,,,
-        s26-01,h,,,,,,,,,
-        s26-01,i,,,,,,,,,
-        s26-01,j,,,,,,,,,
-        s26-01,k,,,,,,,,,
-        s26-01,l,,,,,,,,,
-        s26-01,m,,,,,,,,,
-        s26-01,n,,,,,,,,,
-        s26-01,o,,,,,,,,,
-        s26-01,p,,,,,,,,,
-        s26-01,q,,,,,,,,,
-        s26-01,r,,,,,,,,,
-        s26-01,s,,,,,,,,,
-        s26-01,t,,,,,,,,,
-        s26-01,u,,,,,,,,,
-        s26-01,v,,,,,,,,,
-        s26-01,w,,,,,,,,,
-        s26-01,x,,,,,,,,,
-        s26-01,y,,,,,,,,,
-        s26-01,z,,,,,,,,,
+        by team
+        Team,Name
+        s26-01,a
+        s26-01,b
+        s26-01,c
+        s26-01,d
+        s26-01,e
+        s26-01,f
+        s26-01,g
+        s26-01,h
+        s26-01,i
+        s26-01,j
+        s26-01,k
+        s26-01,l
+        s26-01,m
+        s26-01,n
+        s26-01,o
+        s26-01,p
+        s26-01,q
+        s26-01,r
+        s26-01,s
+        s26-01,t
+        s26-01,u
+        s26-01,v
+        s26-01,w
+        s26-01,x
+        s26-01,y
+        s26-01,z
         """;
     assertEquals(
         expected,
@@ -548,7 +550,8 @@ public class TeamCsvServiceTests {
   }
 
   @Test
-  public void writeFormattedTeamsCsv_teams_properly_grouped() throws Exception {
+  public void writeFormattedTeamsCsv_teams_properly_grouped_with_more_than_4_teams()
+      throws Exception {
     String expected =
         """
         by name
@@ -560,11 +563,17 @@ public class TeamCsvServiceTests {
         Zach H,s26-11
         Tyler,s26-03
         Evan G,s26-03
-        by team,,,
-        Team,Name,,Team,Name,,Team,Name,,Team,Name
-        s26-01,Abhijeet,,s26-03,Alex L,,s26-04,Bourgeoisie,,s26-11,Zach H
-        s26-01,Aiden,,s26-03,Tyler,,,,,,
-        "",,,s26-03,Evan G,,,,,,
+        Catherine,s26-02
+        Charlie Kirk,s26-02
+        by team,
+        Team,Name,,Team,Name
+        s26-01,Abhijeet,,s26-04,Bourgeoisie
+        s26-01,Aiden,,s26-11,Zach H
+        s26-02,Catherine,,,
+        s26-02,Charlie Kirk,,,
+        s26-03,Alex L,,,
+        s26-03,Tyler,,,
+        s26-03,Evan G,,,
         """;
     assertEquals(
         expected,
@@ -576,7 +585,9 @@ public class TeamCsvServiceTests {
                 nt("Bourgeoisie", "s26-04"),
                 nt("Zach H", "s26-11"),
                 nt("Tyler", "s26-03"),
-                nt("Evan G", "s26-03")),
+                nt("Evan G", "s26-03"),
+                nt("Catherine", "s26-02"),
+                nt("Charlie Kirk", "s26-02")),
             1));
   }
 }
