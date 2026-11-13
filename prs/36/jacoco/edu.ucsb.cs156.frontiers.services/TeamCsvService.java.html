@@ -304,28 +304,33 @@ import org.springframework.stereotype.Service;
 <span class="fc" id="L304">    }</span>
 <span class="fc" id="L305">    writeColumnsCsv(writer, List.of(&quot;Name&quot;, &quot;Team&quot;), layout);</span>
 
-<span class="fc" id="L307">    int team_columns = 4;</span>
-<span class="fc" id="L308">    writer.write(&quot;by team&quot; + &quot;,&quot;.repeat(team_columns - 1) + &quot;\r\n&quot;);</span>
-<span class="fc" id="L309">    writeTeamTableCsv(writer, entries, team_columns);</span>
+    // I don't like calling groupByTeam twice but I think this is the best way without altering
+    // everything else
+<span class="fc" id="L309">    final int teams_per_column = 4;</span>
+<span class="fc" id="L310">    int num_teams = groupByTeam(entries).size();</span>
+<span class="fc" id="L311">    int team_columns = (int) Math.ceil(num_teams / (float) teams_per_column);</span>
+<span class="fc" id="L312">    writer.write(&quot;by team&quot; + &quot;,&quot;.repeat(team_columns - 1) + &quot;\r\n&quot;);</span>
+
+<span class="fc" id="L314">    writeTeamTableCsv(writer, entries, team_columns);</span>
     // writer.write(&quot;name_columns: &quot; + name_columns + &quot;\nentries.size(): &quot; + entries.size() + &quot;\n&quot;);
-<span class="fc" id="L311">  }</span>
+<span class="fc" id="L316">  }</span>
 
   private static String join(String first, String lastPart) {
-<span class="fc bfc" id="L314" title="All 2 branches covered.">    if (first.isEmpty()) {</span>
-<span class="fc" id="L315">      return lastPart;</span>
+<span class="fc bfc" id="L319" title="All 2 branches covered.">    if (first.isEmpty()) {</span>
+<span class="fc" id="L320">      return lastPart;</span>
     }
-<span class="fc bfc" id="L317" title="All 2 branches covered.">    if (lastPart.isEmpty()) {</span>
-<span class="fc" id="L318">      return first;</span>
+<span class="fc bfc" id="L322" title="All 2 branches covered.">    if (lastPart.isEmpty()) {</span>
+<span class="fc" id="L323">      return first;</span>
     }
-<span class="fc" id="L320">    return first + &quot; &quot; + lastPart;</span>
+<span class="fc" id="L325">    return first + &quot; &quot; + lastPart;</span>
   }
 
   private static Map&lt;String, Integer&gt; counts(List&lt;String&gt; values) {
-<span class="fc" id="L324">    Map&lt;String, Integer&gt; result = new HashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L325" title="All 2 branches covered.">    for (String value : values) {</span>
-<span class="fc" id="L326">      result.merge(value, 1, Integer::sum);</span>
-<span class="fc" id="L327">    }</span>
-<span class="fc" id="L328">    return result;</span>
+<span class="fc" id="L329">    Map&lt;String, Integer&gt; result = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L330" title="All 2 branches covered.">    for (String value : values) {</span>
+<span class="fc" id="L331">      result.merge(value, 1, Integer::sum);</span>
+<span class="fc" id="L332">    }</span>
+<span class="fc" id="L333">    return result;</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
