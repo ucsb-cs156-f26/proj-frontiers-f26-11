@@ -151,6 +151,36 @@ public class TeamCsvService {
   }
 
   /**
+   * Splits the items into the given number of rows, filling one column at a time, meaning it is
+   * less balanced
+   *
+   * @param <T> the type of item being laid out (e.g. a student, or a whole team)
+   * @param items the items, in order
+   * @param rows the number of rows, at least 1
+   * @return a list of exactly {@code ceil(items.size() / rows)} lists, the first of which is never
+   *     shorter than any other
+   * @throws IllegalArgumentException if rows is less than 1
+   */
+  public <T> List<List<T>> layoutRows(List<T> items, int rows) {
+    if (rows < 1) {
+      throw new IllegalArgumentException("rows must be at least 1");
+    }
+    // int base = items.size() / rows;
+    // int extra = items.size() % rows;
+    List<List<T>> result = new ArrayList<>();
+    int start = 0;
+    int size = 0;
+    while (start < items.size()) {
+      size =
+          Math.min(
+              items.size() - start, rows); // should just do rows every time until the last column
+      result.add(items.subList(start, start + size));
+      start += size;
+    }
+    return result;
+  }
+
+  /**
    * Writes a CSV made of several side-by-side columns separated by a blank cell. The header line
    * repeats {@code headerCells} once per column; then there is one line per row of the longest
    * column. Each column is a list of rows, and each row a list of cells with the same length as
@@ -270,7 +300,6 @@ public class TeamCsvService {
     writeColumnsCsv(writer, List.of("Team", "Name"), layout);
   }
 
-  // THE ONE IM WORKING ON DESPITE BEING IDENTICAL TO WRITETEAMTEABLECSV
   /**
    * Writes the combined out put of name2team and teamtable
    *
@@ -282,36 +311,49 @@ public class TeamCsvService {
    */
   public void writeFormattedTeamsCsv(Writer writer, List<NameAndTeam> entries, int columns)
       throws IOException {
+
+    // altered name2teamcsv that doesnt fill
     final int num_rows = 24;
     int name_columns = (int) Math.ceil(entries.size() / (float) num_rows);
 
     writer.write("by name" + ",".repeat(name_columns - 1) + "\r\n");
-    // altered layoutColumns that doesn't fill
-    List<List<NameAndTeam>> name_column_list = new ArrayList<>();
-    int start = 0;
-    for (int c = 0; c < name_columns; c++) {
-      int size =
-          Math.min(
-              entries.size() - start,
-              num_rows); // should just do num_rows every time until the last column
-      name_column_list.add(entries.subList(start, start + size));
-      start += size;
-    }
-    // altered writeName2TeamCsv where it doesn't fill
+    // List<List<NameAndTeam>> name_column_list = layoutRows(entries, num_rows);
+    // int start = 0;
+    // for (int c = 0; c < name_columns; c++) {
+    //   int size =
+    //       Math.min(
+    //           entries.size() - start,
+    //           num_rows); // should just do num_rows every time until the last column
+    //   name_column_list.add(entries.subList(start, start + size));
+    //   start += size;
+    // }
+
     List<List<List<String>>> layout = new ArrayList<>();
-    for (List<NameAndTeam> column : name_column_list) {
+    for (List<NameAndTeam> column : layoutRows(entries, num_rows)) {
       layout.add(column.stream().map(e -> List.of(e.name(), e.team())).toList());
     }
     writeColumnsCsv(writer, List.of("Name", "Team"), layout);
 
-    // I don't like calling groupByTeam twice but I think this is the best way without altering
-    // everything else
+    // altered writeteamtable that doesnt fill
     final int teams_per_column = 4;
-    int num_teams = groupByTeam(entries).size();
-    int team_columns = (int) Math.ceil(num_teams / (float) teams_per_column);
+    List<List<NameAndTeam>> organized_teams = groupByTeam(entries);
+
+    int team_columns = (int) Math.ceil(organized_teams.size() / (float) teams_per_column);
     writer.write("by team" + ",".repeat(team_columns - 1) + "\r\n");
 
-    writeTeamTableCsv(writer, entries, team_columns);
+    layout.clear();
+    // List<List<List<String>>> layout = new ArrayList<>();
+    // List<List<NameAndTeam team_column_list
+    for (List<List<NameAndTeam>> column : layoutRows(organized_teams, teams_per_column)) {
+      List<List<String>> rows = new ArrayList<>();
+      for (List<NameAndTeam> team : column) {
+        for (NameAndTeam entry : team) {
+          rows.add(List.of(entry.team(), entry.name()));
+        }
+      }
+      layout.add(rows);
+    }
+    writeColumnsCsv(writer, List.of("Team", "Name"), layout);
     // writer.write("name_columns: " + name_columns + "\nentries.size(): " + entries.size() + "\n");
   }
 

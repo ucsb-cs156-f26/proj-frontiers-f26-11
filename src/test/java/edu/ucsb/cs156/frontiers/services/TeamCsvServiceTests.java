@@ -567,13 +567,14 @@ public class TeamCsvServiceTests {
         Charlie Kirk,s26-02
         by team,
         Team,Name,,Team,Name
-        s26-01,Abhijeet,,s26-04,Bourgeoisie
-        s26-01,Aiden,,s26-11,Zach H
+        s26-01,Abhijeet,,s26-11,Zach H
+        s26-01,Aiden,,,
         s26-02,Catherine,,,
         s26-02,Charlie Kirk,,,
         s26-03,Alex L,,,
         s26-03,Tyler,,,
         s26-03,Evan G,,,
+        s26-04,Bourgeoisie,,,
         """;
     assertEquals(
         expected,
