@@ -162,8 +162,8 @@ import org.springframework.stereotype.Service;
    * @throws IllegalArgumentException if rows is less than 1
    */
   public &lt;T&gt; List&lt;List&lt;T&gt;&gt; layoutRows(List&lt;T&gt; items, int rows) {
-<span class="pc bpc" id="L165" title="1 of 2 branches missed.">    if (rows &lt; 1) {</span>
-<span class="nc" id="L166">      throw new IllegalArgumentException(&quot;rows must be at least 1&quot;);</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">    if (rows &lt; 1) {</span>
+<span class="fc" id="L166">      throw new IllegalArgumentException(&quot;rows must be at least 1&quot;);</span>
     }
     // int base = items.size() / rows;
     // int extra = items.size() % rows;
