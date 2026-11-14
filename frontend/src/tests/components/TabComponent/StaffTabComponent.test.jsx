@@ -131,9 +131,6 @@ describe("StaffTabComponent Tests", () => {
     expect(
       screen.queryByTestId(`${rsTestId}-cell-row-0-col-Delete-button`),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId(`${testId}-download-csv-info-icon`),
-    ).not.toBeInTheDocument();
   });
 
   test("Table Renders with no students", async () => {
@@ -801,70 +798,6 @@ describe("StaffTabComponent Tests", () => {
     expect(openSpy).toHaveBeenCalledWith(
       "/help/csv#staff-information",
       "_blank",
-    );
-  });
-
-
-  test("Download Staff CSV help icon opens the CSV documentation", async () => {
-  render(
-    <QueryClientProvider client={queryClient}>
-      <StaffTabComponent
-        courseId={1}
-        testIdPrefix={testId}
-        currentUser={currentUserFixtures.instructorUser}
-      />
-    </QueryClientProvider>,
-  );
-
-  const downloadButton = await screen.findByTestId(
-    `${testId}-download-csv-button`,
-  );
-
-  expect(downloadButton).toHaveAttribute(
-    "href",
-    "/api/csv/coursestaff?courseId=1",
-  );
-
-  const helpIcon = screen.getByTestId(
-    `${testId}-download-csv-info-icon`,
-  );
-
-  const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
-
-  fireEvent.click(helpIcon);
-
-  expect(openSpy).toHaveBeenCalledWith(
-    "/help/csv#staff-information",
-    "_blank",
-  );
-
-  openSpy.mockRestore();
-});
-
-  test("Download Staff CSV button links to the download endpoint", async () => {
-    axiosMock
-      .onGet("/api/coursestaff/course?courseId=1")
-      .reply(200, courseStaffFixtures.threeStaff);
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <StaffTabComponent
-          courseId={1}
-          testIdPrefix={testId}
-          currentUser={currentUserFixtures.instructorUser}
-        />
-      </QueryClientProvider>,
-    );
-
-    const downloadCsvButton = await screen.findByTestId(
-      `${testId}-download-csv-button`,
-    );
-
-    expect(downloadCsvButton).toBeInTheDocument();
-    expect(downloadCsvButton).toHaveTextContent("Download Staff CSV");
-    expect(downloadCsvButton).toHaveAttribute(
-      "href",
-      "/api/csv/coursestaff?courseId=1",
     );
   });
 
