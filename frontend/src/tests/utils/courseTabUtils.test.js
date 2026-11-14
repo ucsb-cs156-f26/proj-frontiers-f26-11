@@ -22,6 +22,7 @@ describe("courseTabUtils tests", () => {
       "students",
       "staff",
       "teams",
+      "emails",
       "sections",
       "assignments",
       "new-assignments",

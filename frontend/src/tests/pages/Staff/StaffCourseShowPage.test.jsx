@@ -259,6 +259,7 @@ describe("StaffCourseShowPage tests", () => {
         "Students",
         "Staff",
         "Teams",
+        "Emails",
         "Assignments",
         "New Assignments",
         "Jobs",
