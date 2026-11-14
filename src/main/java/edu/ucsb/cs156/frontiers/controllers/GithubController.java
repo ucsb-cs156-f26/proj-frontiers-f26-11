@@ -1,8 +1,12 @@
 package edu.ucsb.cs156.frontiers.controllers;
 
 import edu.ucsb.cs156.frontiers.entities.User;
+import edu.ucsb.cs156.frontiers.enums.OrgStatus;
+import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
+import edu.ucsb.cs156.frontiers.repositories.RosterStudentRepository;
 import edu.ucsb.cs156.frontiers.repositories.UserRepository;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -18,12 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/github")
 public class GithubController extends ApiController {
 
-  private final UserRepository userRepository;
-
-  public GithubController(UserRepository userRepository) {
-    super();
-    this.userRepository = userRepository;
-  }
+  @Autowired private UserRepository userRepository;
+  @Autowired private CourseStaffRepository courseStaffRepository;
+  @Autowired private RosterStudentRepository rosterStudentRepository;
 
   @PreAuthorize("hasRole('ROLE_GITHUB')")
   @DeleteMapping("/disconnect")
@@ -32,6 +33,31 @@ public class GithubController extends ApiController {
     currentUser.setGithubId(null);
     currentUser.setGithubLogin(null);
     userRepository.save(currentUser);
+
+    rosterStudentRepository
+        .findAllByEmail(currentUser.getEmail())
+        .forEach(
+            rs -> {
+              if (rs.getOrgStatus() == OrgStatus.INVITED) {
+                rs.setGithubId(null);
+                rs.setGithubLogin(null);
+                rs.setOrgStatus(OrgStatus.JOINCOURSE);
+                rosterStudentRepository.save(rs);
+              }
+            });
+
+    courseStaffRepository
+        .findAllByEmail(currentUser.getEmail())
+        .forEach(
+            cs -> {
+              if (cs.getOrgStatus() == OrgStatus.INVITED) {
+                cs.setGithubId(null);
+                cs.setGithubLogin(null);
+                cs.setOrgStatus(OrgStatus.JOINCOURSE);
+                courseStaffRepository.save(cs);
+              }
+            });
+
     Authentication auth = context.getAuthentication();
     List<? extends GrantedAuthority> removedAuthority =
         auth.getAuthorities().stream()
