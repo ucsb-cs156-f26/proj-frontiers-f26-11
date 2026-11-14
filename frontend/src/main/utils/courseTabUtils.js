@@ -8,7 +8,6 @@ export const COURSE_TABS = [
   "students",
   "staff",
   "teams",
-  "emails",
   "sections",
   "assignments",
   "new-assignments",
