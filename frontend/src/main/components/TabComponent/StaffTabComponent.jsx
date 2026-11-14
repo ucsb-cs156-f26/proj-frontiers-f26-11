@@ -105,13 +105,6 @@ export default function StaffTabComponent({
     window.open("/help/csv#staff-information", "_blank");
   };
 
-  // Render tooltip for disabled buttons
-  const renderComingSoonTooltip = (props) => (
-    <Tooltip id="coming-soon-tooltip" {...props}>
-      Coming Soon
-    </Tooltip>
-  );
-
   return (
     <div data-testid={`${testIdPrefix}-StaffTabComponent`}>
       <Modal
@@ -185,18 +178,15 @@ export default function StaffTabComponent({
             </Button>
           </Col>
           <Col>
-            <OverlayTrigger placement="top" overlay={renderComingSoonTooltip}>
-              <span className="d-inline-block w-100">
-                <Button
-                  className="w-100 button btn-secondary disabled"
-                  disabled
-                  style={{ pointerEvents: "none" }}
-                  aria-disabled="true"
-                >
-                  Download Staff CSV
-                </Button>
-              </span>
-            </OverlayTrigger>
+            <span className="d-inline-block w-100">
+              <Button
+                href={`/api/csv/coursestaff?courseId=${courseId}`}
+                className="w-100"
+                data-testid={`${testIdPrefix}-download-csv-button`}
+              >
+                Download Staff CSV
+              </Button>
+            </span>
           </Col>
         </Row>
       )}
