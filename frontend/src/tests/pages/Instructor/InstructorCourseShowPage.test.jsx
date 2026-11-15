@@ -313,7 +313,7 @@ describe("InstructorCourseShowPage tests", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByText("Students")).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Students" })).toHaveAttribute(
       "data-rr-ui-event-key",
       "students",
     );
@@ -349,7 +349,7 @@ describe("InstructorCourseShowPage tests", () => {
       "data-rr-ui-event-key",
       "downloads",
     );
-    const changeTabs = screen.getByText("Students");
+    const changeTabs = screen.getByRole("tab", { name: "Students" });
     fireEvent.click(changeTabs);
 
     const downloadsTab = screen.getByText("Downloads");
