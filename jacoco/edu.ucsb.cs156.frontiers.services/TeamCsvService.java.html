@@ -151,6 +151,34 @@ import org.springframework.stereotype.Service;
   }
 
   /**
+   * Splits the items into the given number of rows, filling one column at a time, meaning it is
+   * less balanced
+   *
+   * @param &lt;T&gt; the type of item being laid out (e.g. a student, or a whole team)
+   * @param items the items, in order
+   * @param rows the number of rows, at least 1
+   * @return a list of exactly {@code ceil(items.size() / rows)} lists, the first of which is never
+   *     shorter than any other
+   * @throws IllegalArgumentException if rows is less than 1
+   */
+  public &lt;T&gt; List&lt;List&lt;T&gt;&gt; layoutRows(List&lt;T&gt; items, int rows) {
+<span class="fc bfc" id="L165" title="All 2 branches covered.">    if (rows &lt; 1) {</span>
+<span class="fc" id="L166">      throw new IllegalArgumentException(&quot;rows must be at least 1&quot;);</span>
+    }
+<span class="fc" id="L168">    List&lt;List&lt;T&gt;&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L169">    int start = 0;</span>
+<span class="fc" id="L170">    int size = 0;</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">    while (start &lt; items.size()) {</span>
+<span class="fc" id="L172">      size =</span>
+<span class="fc" id="L173">          Math.min(</span>
+<span class="fc" id="L174">              items.size() - start, rows); // should just do rows every time until the last column</span>
+<span class="fc" id="L175">      result.add(items.subList(start, start + size));</span>
+<span class="fc" id="L176">      start += size;</span>
+    }
+<span class="fc" id="L178">    return result;</span>
+  }
+
+  /**
    * Writes a CSV made of several side-by-side columns separated by a blank cell. The header line
    * repeats {@code headerCells} once per column; then there is one line per row of the longest
    * column. Each column is a list of rows, and each row a list of cells with the same length as
@@ -164,36 +192,35 @@ import org.springframework.stereotype.Service;
   public void writeColumnsCsv(
       Writer writer, List&lt;String&gt; headerCells, List&lt;List&lt;List&lt;String&gt;&gt;&gt; columns)
       throws IOException {
-<span class="fc" id="L167">    int width = headerCells.size();</span>
-<span class="fc" id="L168">    List&lt;String&gt; blanks = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L169" title="All 2 branches covered.">    for (int i = 0; i &lt; width; i++) {</span>
-<span class="fc" id="L170">      blanks.add(&quot;&quot;);</span>
+<span class="fc" id="L195">    int width = headerCells.size();</span>
+<span class="fc" id="L196">    List&lt;String&gt; blanks = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L197" title="All 2 branches covered.">    for (int i = 0; i &lt; width; i++) {</span>
+<span class="fc" id="L198">      blanks.add(&quot;&quot;);</span>
     }
-<span class="fc" id="L172">    int rows = columns.stream().mapToInt(List::size).max().orElse(0);</span>
+<span class="fc" id="L200">    int rows = columns.stream().mapToInt(List::size).max().orElse(0);</span>
 
-<span class="fc" id="L174">    try (CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT)) {</span>
-<span class="fc" id="L175">      List&lt;String&gt; header = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L176" title="All 2 branches covered.">      for (int c = 0; c &lt; columns.size(); c++) {</span>
-<span class="fc bfc" id="L177" title="All 2 branches covered.">        if (c &gt; 0) {</span>
-<span class="fc" id="L178">          header.add(&quot;&quot;);</span>
-        }
-<span class="fc" id="L180">        header.addAll(headerCells);</span>
+<span class="fc" id="L202">    CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT);</span>
+<span class="fc" id="L203">    List&lt;String&gt; header = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">    for (int c = 0; c &lt; columns.size(); c++) {</span>
+<span class="fc bfc" id="L205" title="All 2 branches covered.">      if (c &gt; 0) {</span>
+<span class="fc" id="L206">        header.add(&quot;&quot;);</span>
       }
-<span class="fc" id="L182">      csvPrinter.printRecord(header);</span>
-
-<span class="fc bfc" id="L184" title="All 2 branches covered.">      for (int r = 0; r &lt; rows; r++) {</span>
-<span class="fc" id="L185">        List&lt;String&gt; row = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L186" title="All 2 branches covered.">        for (int c = 0; c &lt; columns.size(); c++) {</span>
-<span class="fc bfc" id="L187" title="All 2 branches covered.">          if (c &gt; 0) {</span>
-<span class="fc" id="L188">            row.add(&quot;&quot;);</span>
-          }
-<span class="fc" id="L190">          List&lt;List&lt;String&gt;&gt; column = columns.get(c);</span>
-<span class="fc bfc" id="L191" title="All 2 branches covered.">          row.addAll(r &lt; column.size() ? column.get(r) : blanks);</span>
-        }
-<span class="fc" id="L193">        csvPrinter.printRecord(row);</span>
-      }
+<span class="fc" id="L208">      header.addAll(headerCells);</span>
     }
-<span class="fc" id="L196">  }</span>
+<span class="fc" id="L210">    csvPrinter.printRecord(header);</span>
+
+<span class="fc bfc" id="L212" title="All 2 branches covered.">    for (int r = 0; r &lt; rows; r++) {</span>
+<span class="fc" id="L213">      List&lt;String&gt; row = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L214" title="All 2 branches covered.">      for (int c = 0; c &lt; columns.size(); c++) {</span>
+<span class="fc bfc" id="L215" title="All 2 branches covered.">        if (c &gt; 0) {</span>
+<span class="fc" id="L216">          row.add(&quot;&quot;);</span>
+        }
+<span class="fc" id="L218">        List&lt;List&lt;String&gt;&gt; column = columns.get(c);</span>
+<span class="fc bfc" id="L219" title="All 2 branches covered.">        row.addAll(r &lt; column.size() ? column.get(r) : blanks);</span>
+      }
+<span class="fc" id="L221">      csvPrinter.printRecord(row);</span>
+    }
+<span class="fc" id="L223">  }</span>
 
   /**
    * Writes the &quot;Name,Team&quot; table: the entries balanced across the given number of column pairs,
@@ -207,12 +234,12 @@ import org.springframework.stereotype.Service;
    */
   public void writeName2TeamCsv(Writer writer, List&lt;NameAndTeam&gt; entries, int columns)
       throws IOException {
-<span class="fc" id="L210">    List&lt;List&lt;List&lt;String&gt;&gt;&gt; layout = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L211" title="All 2 branches covered.">    for (List&lt;NameAndTeam&gt; column : layoutColumns(entries, columns)) {</span>
-<span class="fc" id="L212">      layout.add(column.stream().map(e -&gt; List.of(e.name(), e.team())).toList());</span>
-<span class="fc" id="L213">    }</span>
-<span class="fc" id="L214">    writeColumnsCsv(writer, List.of(&quot;Name&quot;, &quot;Team&quot;), layout);</span>
-<span class="fc" id="L215">  }</span>
+<span class="fc" id="L237">    List&lt;List&lt;List&lt;String&gt;&gt;&gt; layout = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L238" title="All 2 branches covered.">    for (List&lt;NameAndTeam&gt; column : layoutColumns(entries, columns)) {</span>
+<span class="fc" id="L239">      layout.add(column.stream().map(e -&gt; List.of(e.name(), e.team())).toList());</span>
+<span class="fc" id="L240">    }</span>
+<span class="fc" id="L241">    writeColumnsCsv(writer, List.of(&quot;Name&quot;, &quot;Team&quot;), layout);</span>
+<span class="fc" id="L242">  }</span>
 
   /**
    * Groups the entries by team, one list per team, with the teams in case-insensitive alphabetical
@@ -224,21 +251,21 @@ import org.springframework.stereotype.Service;
    * @return one list per team, teams sorted by name, unassigned students last
    */
   public List&lt;List&lt;NameAndTeam&gt;&gt; groupByTeam(List&lt;NameAndTeam&gt; entries) {
-<span class="fc" id="L227">    Map&lt;String, List&lt;NameAndTeam&gt;&gt; byTeam =</span>
-<span class="fc" id="L228">        new TreeMap&lt;&gt;(String.CASE_INSENSITIVE_ORDER.thenComparing(Comparator.naturalOrder()));</span>
-<span class="fc" id="L229">    List&lt;NameAndTeam&gt; noTeam = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L230" title="All 2 branches covered.">    for (NameAndTeam entry : entries) {</span>
-<span class="fc bfc" id="L231" title="All 2 branches covered.">      if (entry.team().isEmpty()) {</span>
-<span class="fc" id="L232">        noTeam.add(entry);</span>
+<span class="fc" id="L254">    Map&lt;String, List&lt;NameAndTeam&gt;&gt; byTeam =</span>
+<span class="fc" id="L255">        new TreeMap&lt;&gt;(String.CASE_INSENSITIVE_ORDER.thenComparing(Comparator.naturalOrder()));</span>
+<span class="fc" id="L256">    List&lt;NameAndTeam&gt; noTeam = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L257" title="All 2 branches covered.">    for (NameAndTeam entry : entries) {</span>
+<span class="fc bfc" id="L258" title="All 2 branches covered.">      if (entry.team().isEmpty()) {</span>
+<span class="fc" id="L259">        noTeam.add(entry);</span>
       } else {
-<span class="fc" id="L234">        byTeam.computeIfAbsent(entry.team(), k -&gt; new ArrayList&lt;&gt;()).add(entry);</span>
+<span class="fc" id="L261">        byTeam.computeIfAbsent(entry.team(), k -&gt; new ArrayList&lt;&gt;()).add(entry);</span>
       }
-<span class="fc" id="L236">    }</span>
-<span class="fc" id="L237">    List&lt;List&lt;NameAndTeam&gt;&gt; result = new ArrayList&lt;&gt;(byTeam.values());</span>
-<span class="fc bfc" id="L238" title="All 2 branches covered.">    if (!noTeam.isEmpty()) {</span>
-<span class="fc" id="L239">      result.add(noTeam);</span>
+<span class="fc" id="L263">    }</span>
+<span class="fc" id="L264">    List&lt;List&lt;NameAndTeam&gt;&gt; result = new ArrayList&lt;&gt;(byTeam.values());</span>
+<span class="fc bfc" id="L265" title="All 2 branches covered.">    if (!noTeam.isEmpty()) {</span>
+<span class="fc" id="L266">      result.add(noTeam);</span>
     }
-<span class="fc" id="L241">    return result;</span>
+<span class="fc" id="L268">    return result;</span>
   }
 
   /**
@@ -255,35 +282,79 @@ import org.springframework.stereotype.Service;
    */
   public void writeTeamTableCsv(Writer writer, List&lt;NameAndTeam&gt; entries, int columns)
       throws IOException {
-<span class="fc" id="L258">    List&lt;List&lt;List&lt;String&gt;&gt;&gt; layout = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L259" title="All 2 branches covered.">    for (List&lt;List&lt;NameAndTeam&gt;&gt; column : layoutColumns(groupByTeam(entries), columns)) {</span>
-<span class="fc" id="L260">      List&lt;List&lt;String&gt;&gt; rows = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L261" title="All 2 branches covered.">      for (List&lt;NameAndTeam&gt; team : column) {</span>
-<span class="fc bfc" id="L262" title="All 2 branches covered.">        for (NameAndTeam entry : team) {</span>
-<span class="fc" id="L263">          rows.add(List.of(entry.team(), entry.name()));</span>
-<span class="fc" id="L264">        }</span>
-<span class="fc" id="L265">      }</span>
-<span class="fc" id="L266">      layout.add(rows);</span>
-<span class="fc" id="L267">    }</span>
-<span class="fc" id="L268">    writeColumnsCsv(writer, List.of(&quot;Team&quot;, &quot;Name&quot;), layout);</span>
-<span class="fc" id="L269">  }</span>
+<span class="fc" id="L285">    List&lt;List&lt;List&lt;String&gt;&gt;&gt; layout = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L286" title="All 2 branches covered.">    for (List&lt;List&lt;NameAndTeam&gt;&gt; column : layoutColumns(groupByTeam(entries), columns)) {</span>
+<span class="fc" id="L287">      List&lt;List&lt;String&gt;&gt; rows = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L288" title="All 2 branches covered.">      for (List&lt;NameAndTeam&gt; team : column) {</span>
+<span class="fc bfc" id="L289" title="All 2 branches covered.">        for (NameAndTeam entry : team) {</span>
+<span class="fc" id="L290">          rows.add(List.of(entry.team(), entry.name()));</span>
+<span class="fc" id="L291">        }</span>
+<span class="fc" id="L292">      }</span>
+<span class="fc" id="L293">      layout.add(rows);</span>
+<span class="fc" id="L294">    }</span>
+<span class="fc" id="L295">    writeColumnsCsv(writer, List.of(&quot;Team&quot;, &quot;Name&quot;), layout);</span>
+<span class="fc" id="L296">  }</span>
+
+  /**
+   * Writes the combined out put of name2team and teamtable
+   *
+   * @param writer where to write the CSV
+   * @param entries the entries, in order
+   * @param columns not actually used but the way the backend calls it it's easier to leave it here
+   * @throws IOException if writing fails
+   * @throws IllegalArgumentException if columns is less than 1
+   */
+  public void writeFormattedTeamsCsv(Writer writer, List&lt;NameAndTeam&gt; entries, int columns)
+      throws IOException {
+
+    // altered name2teamcsv that doesnt fill
+<span class="fc" id="L311">    final int num_rows = 24;</span>
+<span class="fc" id="L312">    int name_columns = (int) Math.ceil(entries.size() / (float) num_rows);</span>
+
+<span class="fc" id="L314">    writer.write(&quot;by name&quot; + &quot;,&quot;.repeat(name_columns - 1) + &quot;\r\n&quot;);</span>
+
+<span class="fc" id="L316">    List&lt;List&lt;List&lt;String&gt;&gt;&gt; layout = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L317" title="All 2 branches covered.">    for (List&lt;NameAndTeam&gt; column : layoutRows(entries, num_rows)) {</span>
+<span class="fc" id="L318">      layout.add(column.stream().map(e -&gt; List.of(e.name(), e.team())).toList());</span>
+<span class="fc" id="L319">    }</span>
+<span class="fc" id="L320">    writeColumnsCsv(writer, List.of(&quot;Name&quot;, &quot;Team&quot;), layout);</span>
+
+    // altered writeteamtable that doesnt fill
+<span class="fc" id="L323">    final int teams_per_column = 4;</span>
+<span class="fc" id="L324">    List&lt;List&lt;NameAndTeam&gt;&gt; organized_teams = groupByTeam(entries);</span>
+
+<span class="fc" id="L326">    int team_columns = (int) Math.ceil(organized_teams.size() / (float) teams_per_column);</span>
+<span class="fc" id="L327">    writer.write(&quot;by team&quot; + &quot;,&quot;.repeat(team_columns - 1) + &quot;\r\n&quot;);</span>
+
+<span class="fc" id="L329">    layout.clear();</span>
+<span class="fc bfc" id="L330" title="All 2 branches covered.">    for (List&lt;List&lt;NameAndTeam&gt;&gt; column : layoutRows(organized_teams, teams_per_column)) {</span>
+<span class="fc" id="L331">      List&lt;List&lt;String&gt;&gt; rows = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L332" title="All 2 branches covered.">      for (List&lt;NameAndTeam&gt; team : column) {</span>
+<span class="fc bfc" id="L333" title="All 2 branches covered.">        for (NameAndTeam entry : team) {</span>
+<span class="fc" id="L334">          rows.add(List.of(entry.team(), entry.name()));</span>
+<span class="fc" id="L335">        }</span>
+<span class="fc" id="L336">      }</span>
+<span class="fc" id="L337">      layout.add(rows);</span>
+<span class="fc" id="L338">    }</span>
+<span class="fc" id="L339">    writeColumnsCsv(writer, List.of(&quot;Team&quot;, &quot;Name&quot;), layout);</span>
+<span class="fc" id="L340">  }</span>
 
   private static String join(String first, String lastPart) {
-<span class="fc bfc" id="L272" title="All 2 branches covered.">    if (first.isEmpty()) {</span>
-<span class="fc" id="L273">      return lastPart;</span>
+<span class="fc bfc" id="L343" title="All 2 branches covered.">    if (first.isEmpty()) {</span>
+<span class="fc" id="L344">      return lastPart;</span>
     }
-<span class="fc bfc" id="L275" title="All 2 branches covered.">    if (lastPart.isEmpty()) {</span>
-<span class="fc" id="L276">      return first;</span>
+<span class="fc bfc" id="L346" title="All 2 branches covered.">    if (lastPart.isEmpty()) {</span>
+<span class="fc" id="L347">      return first;</span>
     }
-<span class="fc" id="L278">    return first + &quot; &quot; + lastPart;</span>
+<span class="fc" id="L349">    return first + &quot; &quot; + lastPart;</span>
   }
 
   private static Map&lt;String, Integer&gt; counts(List&lt;String&gt; values) {
-<span class="fc" id="L282">    Map&lt;String, Integer&gt; result = new HashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L283" title="All 2 branches covered.">    for (String value : values) {</span>
-<span class="fc" id="L284">      result.merge(value, 1, Integer::sum);</span>
-<span class="fc" id="L285">    }</span>
-<span class="fc" id="L286">    return result;</span>
+<span class="fc" id="L353">    Map&lt;String, Integer&gt; result = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L354" title="All 2 branches covered.">    for (String value : values) {</span>
+<span class="fc" id="L355">      result.merge(value, 1, Integer::sum);</span>
+<span class="fc" id="L356">    }</span>
+<span class="fc" id="L357">    return result;</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
