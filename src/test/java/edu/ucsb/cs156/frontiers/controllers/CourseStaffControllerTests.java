@@ -170,7 +170,7 @@ public class CourseStaffControllerTests extends ControllerTestCase {
         CourseStaff.builder()
             .id(1L)
             .firstName("Existing")
-            .lastName("Student")
+            .lastName("OldName")
             .email("cgaucho@ucsb.edu")
             .course(course1)
             .build();
@@ -191,7 +191,7 @@ public class CourseStaffControllerTests extends ControllerTestCase {
             .course(course1)
             .build();
 
-    course1.setCourseStaff(List.of(existingStaff));
+    course1.setCourseStaff(List.of(cs2, existingStaff));
 
     when(courseRepository.findById(eq(1L))).thenReturn(Optional.of(course1));
     when(courseStaffRepository.save(eq(expectedSaved))).thenReturn(expectedSaved);
@@ -221,6 +221,49 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(courseStaffRepository, times(1)).save(eq(expectedSaved));
   }
 
+  /** Test that the POST endpoint converts @umail.ucsb.edu to @ucsb.edu */
+  @Test
+  @WithInstructorCoursePermissions
+  public void testPostCourseStaff_withUmail() throws Exception {
+
+    CourseStaff csUmail =
+        CourseStaff.builder()
+            .firstName("Chris")
+            .lastName("Gaucho")
+            .email("cgaucho@ucsb.edu")
+            .course(course1)
+            .orgStatus(OrgStatus.PENDING)
+            .build();
+
+    when(courseRepository.findById(eq(1L))).thenReturn(Optional.of(course1));
+    when(courseStaffRepository.save(eq(csUmail))).thenReturn(csUmail);
+    doNothing().when(updateUserService).attachUserToCourseStaff(any(CourseStaff.class));
+    // act
+
+    MvcResult response =
+        mockMvc
+            .perform(
+                post("/api/coursestaff/post")
+                    .with(csrf())
+                    .param("firstName", "Chris")
+                    .param("lastName", "Gaucho")
+                    .param("email", "cgaucho@umail.ucsb.edu")
+                    .param("courseId", "1"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    // assert
+
+    verify(courseRepository, times(1)).findById(eq(1L));
+    verify(courseStaffRepository, times(1)).save(eq(csUmail));
+    verify(updateUserService, times(1)).attachUserToCourseStaff(eq(csUmail));
+
+    String responseString = response.getResponse().getContentAsString();
+    StaffUpsertResponse upsertResponse =
+        mapper.readValue(responseString, StaffUpsertResponse.class);
+    assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
+  }
+
   /** Test the POST endpoint */
   @Test
   @WithMockUser(roles = {"ADMIN"})
@@ -230,6 +273,7 @@ public class CourseStaffControllerTests extends ControllerTestCase {
         Course.builder()
             .id(1L)
             .courseName("CS156")
+            .courseStaff(List.of())
             .orgName("ucsb-cs156-s25")
             .term("S25")
             .school(School.UCSB)
@@ -269,8 +313,9 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(updateUserService).attachUserToCourseStaff(any(CourseStaff.class));
 
     String responseString = response.getResponse().getContentAsString();
-    String expectedJson = mapper.writeValueAsString(cs2);
-    assertEquals(expectedJson, responseString);
+    StaffUpsertResponse upsertResponse =
+        mapper.readValue(responseString, StaffUpsertResponse.class);
+    assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
   /** Test the POST endpoint email sanitization */
@@ -282,6 +327,7 @@ public class CourseStaffControllerTests extends ControllerTestCase {
         Course.builder()
             .id(1L)
             .courseName("CS156")
+            .courseStaff(List.of())
             .orgName("ucsb-cs156-s25")
             .term("S25")
             .school(School.UCSB)
@@ -321,8 +367,9 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(updateUserService).attachUserToCourseStaff(any(CourseStaff.class));
 
     String responseString = response.getResponse().getContentAsString();
-    String expectedJson = mapper.writeValueAsString(cs2);
-    assertEquals(expectedJson, responseString);
+    StaffUpsertResponse upsertResponse =
+        mapper.readValue(responseString, StaffUpsertResponse.class);
+    assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
   /** Test the POST endpoint */
@@ -334,6 +381,7 @@ public class CourseStaffControllerTests extends ControllerTestCase {
         Course.builder()
             .id(1L)
             .courseName("CS156")
+            .courseStaff(List.of())
             .orgName("ucsb-cs156-s25")
             .installationId("12345")
             .term("S25")
@@ -372,8 +420,9 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(courseStaffRepository, times(1)).save(eq(cs2));
 
     String responseString = response.getResponse().getContentAsString();
-    String expectedJson = mapper.writeValueAsString(cs2);
-    assertEquals(expectedJson, responseString);
+    StaffUpsertResponse upsertResponse =
+        mapper.readValue(responseString, StaffUpsertResponse.class);
+    assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
   /**

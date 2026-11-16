@@ -40,14 +40,15 @@ public class CourseStaffController extends ApiController {
   @Autowired private CurrentUserService currentUserService;
 
   /**
-   * This method creates a new CourseStaff.
+   * This method creates a new CourseStaff. It is important to keep the code in this method
+   * consistent with the code for adding multiple course staff from a CSV
    *
    * @return the created CourseStaff
    */
   @Operation(summary = "Add a staff member to a course")
   @PreAuthorize("@CourseSecurity.hasInstructorPermissions(#root, #courseId)")
   @PostMapping("/post")
-  public CourseStaff postCourseStaff(
+  public ResponseEntity<StaffUpsertResponse> postCourseStaff(
       @Parameter(name = "firstName") @RequestParam String firstName,
       @Parameter(name = "lastName") @RequestParam String lastName,
       @Parameter(name = "email") @RequestParam String email,
@@ -62,24 +63,12 @@ public class CourseStaffController extends ApiController {
             .orElseThrow(() -> new EntityNotFoundException(Course.class, courseId));
 
     CourseStaff courseStaff =
-        CourseStaff.builder()
-            .firstName(firstName)
-            .lastName(lastName)
-            .email(email.strip())
-            .course(course)
-            .build();
+        CourseStaff.builder().firstName(firstName).lastName(lastName).email(email.strip()).build();
 
-    if (course.getInstallationId() != null) {
-      courseStaff.setOrgStatus(OrgStatus.JOINCOURSE);
-    } else {
-      courseStaff.setOrgStatus(OrgStatus.PENDING);
-    }
-
-    CourseStaff savedCourseStaff = courseStaffRepository.save(courseStaff);
-
-    updateUserService.attachUserToCourseStaff(savedCourseStaff);
-
-    return savedCourseStaff;
+    StaffUpsertResponse upsertResponse = upsertStaff(courseStaff, course);
+    courseStaff = courseStaffRepository.save(upsertResponse.courseStaff());
+    updateUserService.attachUserToCourseStaff(courseStaff);
+    return ResponseEntity.ok(upsertResponse);
   }
 
   public static StaffUpsertResponse upsertStaff(CourseStaff staff, Course course) {
@@ -92,7 +81,6 @@ public class CourseStaffController extends ApiController {
       CourseStaff existingStaffObj = existingStaffByEmail.get();
       existingStaffObj.setFirstName(staff.getFirstName());
       existingStaffObj.setLastName(staff.getLastName());
-      existingStaffObj.setEmail(convertedEmail);
       return new StaffUpsertResponse(InsertStatus.UPDATED, existingStaffObj);
     } else {
       staff.setCourse(course);
