@@ -93,4 +93,18 @@ describe("EmailsTabComponent Tests", () => {
       await screen.findByTestId(`${testId}-EmailsCard-card`),
     ).toBeInTheDocument();
   });
+
+  test("shows the Type dropdown on the Emails card", async () => {
+    axiosMock.onGet("/api/courses/emails").reply(200, "a@ucsb.edu");
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EmailsTabComponent courseId={7} testIdPrefix={testId} />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByTestId(`${testId}-EmailsCard-type`),
+    ).toBeInTheDocument();
+  });
 });
