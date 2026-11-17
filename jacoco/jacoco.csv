@@ -100,7 +100,7 @@ frontiers,edu.ucsb.cs156.frontiers.controllers,RepositoryController,0,113,0,8,0,
 frontiers,edu.ucsb.cs156.frontiers.controllers,CourseStaffController,0,307,0,36,0,83,0,30,0,12
 frontiers,edu.ucsb.cs156.frontiers.controllers,TeamsController.TeamMemberResult,0,24,0,0,0,5,0,3,0,3
 frontiers,edu.ucsb.cs156.frontiers.controllers,SystemInfoController,0,10,0,0,0,3,0,3,0,3
-frontiers,edu.ucsb.cs156.frontiers.jobs,DeleteRepoJob,0,196,0,10,0,42,0,8,0,3
+frontiers,edu.ucsb.cs156.frontiers.jobs,DeleteRepoJob,0,210,0,14,0,49,0,12,0,5
 frontiers,edu.ucsb.cs156.frontiers.jobs,AddTeamToGithubJob,0,130,0,10,0,34,0,8,0,3
 frontiers,edu.ucsb.cs156.frontiers.jobs,PushTeamsToCanvasJob,0,515,0,28,0,102,0,20,0,6
 frontiers,edu.ucsb.cs156.frontiers.jobs,RemoveStudentsJob,0,86,0,12,0,20,0,7,0,1
