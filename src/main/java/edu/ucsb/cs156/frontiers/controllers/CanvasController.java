@@ -98,13 +98,14 @@ public class CanvasController extends ApiController {
 
     List<RosterStudent> canvasStudents = canvasService.getCanvasRoster(course);
     for (RosterStudent rosterStudent : canvasStudents) {
-      UpsertResponse upsertResponse = upsertStudent(rosterStudent, course, RosterStatus.ROSTER);
+      UpsertResponse<RosterStudent> upsertResponse =
+          upsertStudent(rosterStudent, course, RosterStatus.ROSTER);
       if (upsertResponse.getInsertStatus() == InsertStatus.REJECTED) {
-        rejectedStudents.add(upsertResponse.rosterStudent());
+        rejectedStudents.add(upsertResponse.entity());
       } else {
         InsertStatus s = upsertResponse.getInsertStatus();
         if (s == InsertStatus.INSERTED) {
-          course.getRosterStudents().add(upsertResponse.rosterStudent());
+          course.getRosterStudents().add(upsertResponse.entity());
         }
         counts[s.ordinal()]++;
       }

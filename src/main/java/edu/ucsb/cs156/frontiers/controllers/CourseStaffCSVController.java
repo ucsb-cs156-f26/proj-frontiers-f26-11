@@ -7,7 +7,7 @@ import edu.ucsb.cs156.frontiers.entities.CourseStaff;
 import edu.ucsb.cs156.frontiers.enums.InsertStatus;
 import edu.ucsb.cs156.frontiers.errors.EntityNotFoundException;
 import edu.ucsb.cs156.frontiers.models.StaffLoadResult;
-import edu.ucsb.cs156.frontiers.models.StaffUpsertResponse;
+import edu.ucsb.cs156.frontiers.models.UpsertResponse;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.services.UpdateUserService;
@@ -90,10 +90,11 @@ public class CourseStaffCSVController extends ApiController {
                 .course(course)
                 .build();
 
-        StaffUpsertResponse upsertResponse = CourseStaffController.upsertStaff(courseStaff, course);
+        UpsertResponse<CourseStaff> upsertResponse =
+            CourseStaffController.upsertStaff(courseStaff, course);
         InsertStatus s = upsertResponse.getInsertStatus();
         if (s == InsertStatus.INSERTED) {
-          course.getCourseStaff().add(upsertResponse.courseStaff());
+          course.getCourseStaff().add(upsertResponse.entity());
         }
         counts[s.ordinal()]++;
       }

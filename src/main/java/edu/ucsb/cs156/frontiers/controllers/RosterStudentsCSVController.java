@@ -148,14 +148,14 @@ public class RosterStudentsCSVController extends ApiController {
       List<String[]> myEntries = csvReader.readAll();
       for (String[] row : myEntries) {
         RosterStudent rosterStudent = fromCSVRow(row, sourceType);
-        UpsertResponse upsertResponse =
+        UpsertResponse<RosterStudent> upsertResponse =
             RosterStudentsController.upsertStudent(rosterStudent, course, RosterStatus.ROSTER);
         if (upsertResponse.getInsertStatus() == InsertStatus.REJECTED) {
-          rejectedStudents.add(upsertResponse.rosterStudent());
+          rejectedStudents.add(upsertResponse.entity());
         } else {
           InsertStatus s = upsertResponse.getInsertStatus();
           if (s == InsertStatus.INSERTED) {
-            course.getRosterStudents().add(upsertResponse.rosterStudent());
+            course.getRosterStudents().add(upsertResponse.entity());
           }
           counts[s.ordinal()]++;
         }
