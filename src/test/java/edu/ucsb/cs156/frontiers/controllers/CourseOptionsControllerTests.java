@@ -73,6 +73,7 @@ public class CourseOptionsControllerTests extends ControllerTestCase {
     expected.put("SLACK_INTEGRATION", false);
     expected.put("NEW_ASSIGNMENT_FEATURES", false);
     expected.put("ENABLE_EDUDORA", false);
+    expected.put("ENABLE_CATME", false);
     assertEquals(mapper.writeValueAsString(expected), response.getResponse().getContentAsString());
   }
 
@@ -351,6 +352,7 @@ public class CourseOptionsControllerTests extends ControllerTestCase {
     expected.put("SLACK_INTEGRATION", false);
     expected.put("NEW_ASSIGNMENT_FEATURES", false);
     expected.put("ENABLE_EDUDORA", false);
+    expected.put("ENABLE_CATME", false);
     assertEquals(mapper.writeValueAsString(expected), response.getResponse().getContentAsString());
   }
 
@@ -381,6 +383,7 @@ public class CourseOptionsControllerTests extends ControllerTestCase {
     expected.put("SLACK_INTEGRATION", false);
     expected.put("NEW_ASSIGNMENT_FEATURES", false);
     expected.put("ENABLE_EDUDORA", false);
+    expected.put("ENABLE_CATME", false);
     assertEquals(mapper.writeValueAsString(expected), response.getResponse().getContentAsString());
   }
 }

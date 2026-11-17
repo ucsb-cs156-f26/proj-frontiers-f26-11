@@ -245,14 +245,18 @@ export default function HelpCsvPage() {
           Staff Information
         </h2>
         <p>
-          Instructors can upload course staff from a simple CSV file with the
-          following format.
+          Instructors can upload and download course staff using the same CSV
+          format. Downloading the staff roster produces a CSV file with the
+          format shown below. This format can also be used as a template for
+          uploading other staff rosters.
         </p>
         <Accordion data-testid="staffAccordion">
           <Accordion.Item eventKey="0">
             <Accordion.Header>Staff (by Email)</Accordion.Header>
             <Accordion.Body>
-              <p>Upload staff using a CSV with the following columns:</p>
+              <p>
+                Both staff CSV uploads and downloads use the following columns:
+              </p>
               <pre className={"csvExample"} data-testid="staffCsvExample">
                 {csvFixtures.staffByEmail}
               </pre>
