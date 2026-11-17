@@ -18,6 +18,7 @@ export default function EmailsTabComponent({ courseId, testIdPrefix }) {
       <CourseEmailsCard
         courseId={courseId}
         type="ALL"
+        showTypeDropdown={true}
         testIdPrefix={`${testIdPrefix}-EmailsCard`}
       />
     </div>
