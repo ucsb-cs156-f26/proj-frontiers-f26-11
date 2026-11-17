@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CourseStaffCSVController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">frontiers</a> &gt; <a href="index.source.html" class="el_package">edu.ucsb.cs156.frontiers.controllers</a> &gt; <span class="el_source">CourseStaffCSVController.java</span></div><h1>CourseStaffCSVController.java</h1><pre class="source lang-java linenums">package edu.ucsb.cs156.frontiers.controllers;
+
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvException;
+import edu.ucsb.cs156.frontiers.entities.Course;
+import edu.ucsb.cs156.frontiers.entities.CourseStaff;
+import edu.ucsb.cs156.frontiers.enums.InsertStatus;
+import edu.ucsb.cs156.frontiers.errors.EntityNotFoundException;
+import edu.ucsb.cs156.frontiers.models.LoadResult;
+import edu.ucsb.cs156.frontiers.models.UpsertResponse;
+import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
+import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
+import edu.ucsb.cs156.frontiers.services.UpdateUserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+
+@Tag(name = &quot;CourseStaff&quot;)
+@RequestMapping(&quot;/api/coursestaff&quot;)
+@RestController(&quot;CourseStaffCSVController&quot;)
+<span class="fc" id="L37">@Slf4j</span>
+<span class="fc" id="L38">public class CourseStaffCSVController extends ApiController {</span>
+
+  @Autowired private CourseStaffRepository courseStaffRepository;
+
+  @Autowired private CourseRepository courseRepository;
+
+  @Autowired private UpdateUserService updateUserService;
+
+  public static final String STAFF_CSV_HEADERS = &quot;firstName,lastName,email&quot;;
+
+  @Operation(summary = &quot;Upload Course Staff from CSV&quot;)
+  @PreAuthorize(&quot;@CourseSecurity.hasInstructorPermissions(#root, #courseId)&quot;)
+  @PostMapping(
+      value = &quot;/upload/csv&quot;,
+      consumes = {&quot;multipart/form-data&quot;})
+  public ResponseEntity&lt;LoadResult&lt;CourseStaff&gt;&gt; uploadStaffCSV(
+      @Parameter(name = &quot;courseId&quot;) @RequestParam Long courseId,
+      @Parameter(name = &quot;file&quot;) @RequestParam(&quot;file&quot;) MultipartFile file)
+      throws IOException, CsvException {
+
+<span class="fc" id="L58">    Course course =</span>
+        courseRepository
+<span class="fc" id="L60">            .findById(courseId)</span>
+<span class="fc" id="L61">            .orElseThrow(() -&gt; new EntityNotFoundException(Course.class, courseId.toString()));</span>
+
+<span class="fc" id="L63">    int counts[] = {0, 0};</span>
+
+<span class="fc" id="L65">    try (InputStream inputStream = new BufferedInputStream(file.getInputStream());</span>
+<span class="fc" id="L66">        InputStreamReader reader = new InputStreamReader(inputStream);</span>
+<span class="fc" id="L67">        CSVReader csvReader = new CSVReader(reader)) {</span>
+
+<span class="fc" id="L69">      String[] headers = csvReader.readNext();</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">      if (headers == null) {</span>
+<span class="fc" id="L71">        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;CSV file is empty&quot;);</span>
+      }
+
+<span class="fc" id="L74">      validateHeaders(headers);</span>
+
+<span class="fc" id="L76">      List&lt;String[]&gt; myEntries = csvReader.readAll();</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">      for (String[] row : myEntries) {</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        if (row.length &lt; 3) {</span>
+<span class="fc" id="L79">          throw new ResponseStatusException(</span>
+              HttpStatus.BAD_REQUEST,
+<span class="fc" id="L81">              String.format(</span>
+<span class="fc" id="L82">                  &quot;CSV row does not have enough columns. Expected at least 3, got %d&quot;, row.length));</span>
+        }
+
+        CourseStaff courseStaff =
+<span class="fc" id="L86">            CourseStaff.builder()</span>
+<span class="fc" id="L87">                .firstName(row[0].trim())</span>
+<span class="fc" id="L88">                .lastName(row[1].trim())</span>
+<span class="fc" id="L89">                .email(row[2].trim())</span>
+<span class="fc" id="L90">                .course(course)</span>
+<span class="fc" id="L91">                .build();</span>
+
+<span class="fc" id="L93">        UpsertResponse&lt;CourseStaff&gt; upsertResponse =</span>
+<span class="fc" id="L94">            CourseStaffController.upsertStaff(courseStaff, course);</span>
+<span class="fc" id="L95">        InsertStatus s = upsertResponse.getInsertStatus();</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        if (s == InsertStatus.INSERTED) {</span>
+<span class="fc" id="L97">          course.getCourseStaff().add(upsertResponse.entity());</span>
+        }
+<span class="fc" id="L99">        counts[s.ordinal()]++;</span>
+<span class="fc" id="L100">      }</span>
+    }
+
+<span class="fc" id="L103">    LoadResult&lt;CourseStaff&gt; successfulResult =</span>
+        new LoadResult&lt;&gt;(
+<span class="fc" id="L105">            counts[InsertStatus.INSERTED.ordinal()],</span>
+<span class="fc" id="L106">            counts[InsertStatus.UPDATED.ordinal()],</span>
+<span class="fc" id="L107">            0,</span>
+<span class="fc" id="L108">            List.of());</span>
+<span class="fc" id="L109">    courseStaffRepository.saveAll(course.getCourseStaff());</span>
+<span class="fc" id="L110">    course.getCourseStaff().forEach(updateUserService::attachUserToCourseStaff);</span>
+<span class="fc" id="L111">    return ResponseEntity.ok(successfulResult);</span>
+  }
+
+  static void validateHeaders(String[] headers) {
+<span class="fc" id="L115">    String[] expectedHeaders = STAFF_CSV_HEADERS.split(&quot;,&quot;);</span>
+<span class="fc bfc" id="L116" title="All 2 branches covered.">    if (headers.length &lt; expectedHeaders.length) {</span>
+<span class="fc" id="L117">      throw new ResponseStatusException(</span>
+          HttpStatus.BAD_REQUEST,
+<span class="fc" id="L119">          String.format(</span>
+              &quot;CSV headers do not match expected format. Expected: %s&quot;, STAFF_CSV_HEADERS));
+    }
+<span class="fc bfc" id="L122" title="All 2 branches covered.">    for (int i = 0; i &lt; expectedHeaders.length; i++) {</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">      if (!expectedHeaders[i].trim().equalsIgnoreCase(headers[i].trim())) {</span>
+<span class="fc" id="L124">        throw new ResponseStatusException(</span>
+            HttpStatus.BAD_REQUEST,
+<span class="fc" id="L126">            String.format(</span>
+                &quot;CSV headers do not match expected format. Expected: %s&quot;, STAFF_CSV_HEADERS));
+      }
+    }
+<span class="fc" id="L130">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
