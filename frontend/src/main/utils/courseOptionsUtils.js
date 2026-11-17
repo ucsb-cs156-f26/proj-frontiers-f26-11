@@ -3,6 +3,7 @@ import { useBackend } from "main/utils/useBackend";
 // Words whose branding does not follow plain title case.
 const SPECIAL_CASE_WORDS = {
   edudora: "EduDora",
+  catme: "CATME",
 };
 
 export function titleCaseFromOption(option) {
