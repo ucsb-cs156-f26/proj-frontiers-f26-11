@@ -17,6 +17,19 @@ public class DeleteRepoJob implements JobContextConsumer {
   CourseRepository courseRepository;
   RepositoryService repositoryService;
 
+  // Pause between deleting repositories to avoid ratelimit
+  public static final long DEFAULT_DELAY_MILLIS = 1000L;
+  // Tests can set this to zero to avoid waiting
+  @Builder.Default long delayMillis = DEFAULT_DELAY_MILLIS;
+
+  /** Pauses the job. Injectable so tests can observe the delay without actually waiting. */
+  @FunctionalInterface
+  public interface Sleeper {
+    void sleep(long millis) throws InterruptedException;
+  }
+
+  @Builder.Default Sleeper sleeper = Thread::sleep;
+
   @Override
   public String getScopeType() {
     return "course";
@@ -51,14 +64,18 @@ public class DeleteRepoJob implements JobContextConsumer {
     } catch (Exception e) {
       ctx.log(String.format("ERROR: Failed to list repositories: %s", e.getMessage()));
       errors++;
-      ctx.log(String.format("Summary: found=0, deleted=0, retained=0, errors=%d", errors));
+      logSummary(ctx, 0, 0, 0, errors);
       return;
     }
 
     int deleted = 0;
     int retained = 0;
 
-    for (GithubRepository repository : repositories) {
+    for (int i = 0; i < repositories.size(); i++) {
+      if (i > 0) {
+        pause();
+      }
+      GithubRepository repository = repositories.get(i);
       try {
         boolean deletedRepository =
             repositoryService.deleteRepositoryIfEmpty(course, repository.name());
@@ -78,10 +95,20 @@ public class DeleteRepoJob implements JobContextConsumer {
       }
     }
 
+    logSummary(ctx, repositories.size(), deleted, retained, errors);
+    ctx.log("Done");
+  }
+
+  private void pause() throws InterruptedException {
+    if (delayMillis > 0) {
+      sleeper.sleep(delayMillis);
+    }
+  }
+
+  private static void logSummary(JobContext ctx, int found, int deleted, int retained, int errors) {
+
     ctx.log(
         String.format(
-            "Summary: found=%d, deleted=%d, retained=%d, errors=%d",
-            repositories.size(), deleted, retained, errors));
-    ctx.log("Done");
+            "Summary: %d repos deleted, %d repos retained, %d errors", deleted, retained, errors));
   }
 }
