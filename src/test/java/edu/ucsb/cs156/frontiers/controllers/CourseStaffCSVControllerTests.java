@@ -19,7 +19,7 @@ import edu.ucsb.cs156.frontiers.entities.Course;
 import edu.ucsb.cs156.frontiers.entities.CourseStaff;
 import edu.ucsb.cs156.frontiers.enums.OrgStatus;
 import edu.ucsb.cs156.frontiers.enums.School;
-import edu.ucsb.cs156.frontiers.models.StaffLoadResult;
+import edu.ucsb.cs156.frontiers.models.LoadResult;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.services.CurrentUserService;
@@ -124,7 +124,7 @@ public class CourseStaffCSVControllerTests extends ControllerTestCase {
     assertTrue(courseStaffCaptor.getValue().contains(courseStaff1Updated));
     assertTrue(courseStaffCaptor.getValue().contains(courseStaff2Updated));
     String responseString = response.getResponse().getContentAsString();
-    StaffLoadResult expectedResult = new StaffLoadResult(1, 2);
+    LoadResult<CourseStaff> expectedResult = new LoadResult<>(1, 2, 0, List.of());
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }
@@ -219,7 +219,7 @@ public class CourseStaffCSVControllerTests extends ControllerTestCase {
 
     String responseString = response.getResponse().getContentAsString();
     // 1 inserted (Ralph, first row), 2 updated (Marge, and Ralph's duplicate second row)
-    StaffLoadResult expectedResult = new StaffLoadResult(1, 2);
+    LoadResult<CourseStaff> expectedResult = new LoadResult<>(1, 2, 0, List.of());
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }
@@ -275,7 +275,7 @@ public class CourseStaffCSVControllerTests extends ControllerTestCase {
     assertEquals("ldelplaya@ucsb.edu", second.getEmail());
 
     String responseString = response.getResponse().getContentAsString();
-    String expectedJson = objectMapper.writeValueAsString(new StaffLoadResult(2, 0));
+    String expectedJson = objectMapper.writeValueAsString(new LoadResult<>(2, 0, 0, List.of()));
     assertEquals(expectedJson, responseString);
   }
 

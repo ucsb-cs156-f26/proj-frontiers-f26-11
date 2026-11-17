@@ -81,7 +81,7 @@ public class CanvasController extends ApiController {
   @Operation(summary = "Upload Roster students for Course from Canvas")
   @PreAuthorize("@CourseSecurity.hasInstructorPermissions(#root, #courseId)")
   @PostMapping("/sync/students")
-  public ResponseEntity<LoadResult> uploadRosterFromCanvas(
+  public ResponseEntity<LoadResult<RosterStudent>> uploadRosterFromCanvas(
       @Parameter(name = "courseId") @RequestParam Long courseId) {
 
     Course course =
@@ -116,8 +116,8 @@ public class CanvasController extends ApiController {
           course.getRosterStudents().stream()
               .filter(student -> student.getRosterStatus() == RosterStatus.DROPPED)
               .toList();
-      LoadResult successfulResult =
-          new LoadResult(
+      LoadResult<RosterStudent> successfulResult =
+          new LoadResult<>(
               counts[InsertStatus.INSERTED.ordinal()],
               counts[InsertStatus.UPDATED.ordinal()],
               droppedStudents.size(),
@@ -133,7 +133,7 @@ public class CanvasController extends ApiController {
       jobService.runAsJob(job);
       return ResponseEntity.ok(successfulResult);
     } else {
-      LoadResult conflictResult = new LoadResult(0, 0, 0, rejectedStudents);
+      LoadResult<RosterStudent> conflictResult = new LoadResult<>(0, 0, 0, rejectedStudents);
       return ResponseEntity.status(HttpStatus.CONFLICT).body(conflictResult);
     }
   }

@@ -6,7 +6,7 @@ import edu.ucsb.cs156.frontiers.entities.Course;
 import edu.ucsb.cs156.frontiers.entities.CourseStaff;
 import edu.ucsb.cs156.frontiers.enums.InsertStatus;
 import edu.ucsb.cs156.frontiers.errors.EntityNotFoundException;
-import edu.ucsb.cs156.frontiers.models.StaffLoadResult;
+import edu.ucsb.cs156.frontiers.models.LoadResult;
 import edu.ucsb.cs156.frontiers.models.UpsertResponse;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
@@ -50,7 +50,7 @@ public class CourseStaffCSVController extends ApiController {
   @PostMapping(
       value = "/upload/csv",
       consumes = {"multipart/form-data"})
-  public ResponseEntity<StaffLoadResult> uploadStaffCSV(
+  public ResponseEntity<LoadResult<CourseStaff>> uploadStaffCSV(
       @Parameter(name = "courseId") @RequestParam Long courseId,
       @Parameter(name = "file") @RequestParam("file") MultipartFile file)
       throws IOException, CsvException {
@@ -100,9 +100,12 @@ public class CourseStaffCSVController extends ApiController {
       }
     }
 
-    StaffLoadResult successfulResult =
-        new StaffLoadResult(
-            counts[InsertStatus.INSERTED.ordinal()], counts[InsertStatus.UPDATED.ordinal()]);
+    LoadResult<CourseStaff> successfulResult =
+        new LoadResult<>(
+            counts[InsertStatus.INSERTED.ordinal()],
+            counts[InsertStatus.UPDATED.ordinal()],
+            0,
+            List.of());
     courseStaffRepository.saveAll(course.getCourseStaff());
     course.getCourseStaff().forEach(updateUserService::attachUserToCourseStaff);
     return ResponseEntity.ok(successfulResult);
