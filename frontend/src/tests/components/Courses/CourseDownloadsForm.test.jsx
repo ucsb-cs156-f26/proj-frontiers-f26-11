@@ -39,7 +39,9 @@ describe("CourseDownloadsForm tests", () => {
   test("uses the testIdPrefix prop when building test ids", () => {
     render(<CourseDownloadsForm testIdPrefix="OtherPrefix" />);
 
-    expect(screen.getByTestId("OtherPrefix-downloads-header")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("OtherPrefix-downloads-header"),
+    ).toBeInTheDocument();
     expect(
       screen.getByTestId("OtherPrefix-btn-download-students-csv"),
     ).toBeInTheDocument();
