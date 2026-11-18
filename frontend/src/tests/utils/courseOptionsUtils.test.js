@@ -21,5 +21,6 @@ describe("courseOptionsUtils tests", () => {
 
   test("titleCaseFromOption uses special casing for branded words", () => {
     expect(titleCaseFromOption("ENABLE_EDUDORA")).toBe("Enable EduDora");
+    expect(titleCaseFromOption("ENABLE_CATME")).toBe("Enable CATME");
   });
 });

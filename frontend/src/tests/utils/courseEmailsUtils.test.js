@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   EMAIL_FORMATS,
+  EMAIL_TYPES,
   courseEmailsQueryKey,
 } from "main/utils/courseEmailsUtils";
 
@@ -14,6 +15,14 @@ describe("courseEmailsUtils tests", () => {
     expect(EMAIL_FORMATS).toEqual([
       { value: "ONE_PER_LINE", label: "One per line" },
       { value: "COMMA_SEPARATED", label: "Comma separated" },
+    ]);
+  });
+
+  test("EMAIL_TYPES lists the endpoint's types, in the order of Students, Staff, All", () => {
+    expect(EMAIL_TYPES).toEqual([
+      { value: "STUDENTS", label: "Students" },
+      { value: "STAFF", label: "Staff" },
+      { value: "ALL", label: "All" },
     ]);
   });
 });

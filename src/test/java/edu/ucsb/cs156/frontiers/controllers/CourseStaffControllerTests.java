@@ -12,8 +12,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.ucsb.cs156.frontiers.ControllerTestCase;
 import edu.ucsb.cs156.frontiers.annotations.WithInstructorCoursePermissions;
 import edu.ucsb.cs156.frontiers.entities.*;
+import edu.ucsb.cs156.frontiers.enums.InsertStatus;
 import edu.ucsb.cs156.frontiers.enums.OrgStatus;
 import edu.ucsb.cs156.frontiers.enums.School;
+import edu.ucsb.cs156.frontiers.models.StaffUpsertResponse;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.services.CurrentUserService;
@@ -55,9 +57,21 @@ public class CourseStaffControllerTests extends ControllerTestCase {
       Course.builder()
           .id(1L)
           .courseName("CS156")
+          .courseStaff(List.of())
           .orgName("ucsb-cs156-s25")
           .term("S25")
           .school(School.UCSB)
+          .build();
+
+  Course course2 =
+      Course.builder()
+          .id(2L)
+          .courseName("CS156")
+          .orgName("ucsb-cs156-s25")
+          .courseStaff(List.of())
+          .term("S25")
+          .school(School.UCSB)
+          .installationId("12345")
           .build();
 
   CourseStaff cs1 =
@@ -77,6 +91,179 @@ public class CourseStaffControllerTests extends ControllerTestCase {
           .course(course1)
           .build();
 
+  @Test
+  @WithInstructorCoursePermissions
+  public void testPostCourseStaffWithNoInstallationId() throws Exception {
+
+    when(courseRepository.findById(eq(1L))).thenReturn(Optional.of(course1));
+
+    ArgumentCaptor<CourseStaff> courseStaffCaptor = ArgumentCaptor.forClass(CourseStaff.class);
+
+    when(courseStaffRepository.save(any(CourseStaff.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    // act
+
+    MvcResult response =
+        mockMvc
+            .perform(
+                post("/api/coursestaff/post")
+                    .with(csrf())
+                    .param("firstName", "Chris")
+                    .param("lastName", "Gaucho")
+                    .param("email", "cgaucho@example.org")
+                    .param("courseId", "1"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    // assert
+    verify(courseRepository, times(1)).findById(eq(1L));
+    verify(courseStaffRepository, times(1)).save(courseStaffCaptor.capture());
+
+    CourseStaff courseStaffSaved = courseStaffCaptor.getValue();
+    assertEquals(OrgStatus.PENDING, courseStaffSaved.getOrgStatus());
+
+    String responseString = response.getResponse().getContentAsString();
+    StaffUpsertResponse upsertResponse =
+        mapper.readValue(responseString, StaffUpsertResponse.class);
+    assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
+  }
+
+  @Test
+  @WithInstructorCoursePermissions
+  public void testPostCourseStaffWithInstallationId() throws Exception {
+
+    when(courseRepository.findById(eq(2L))).thenReturn(Optional.of(course2));
+
+    ArgumentCaptor<CourseStaff> courseStaffCaptor = ArgumentCaptor.forClass(CourseStaff.class);
+
+    when(courseStaffRepository.save(any(CourseStaff.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    // act
+
+    MvcResult response =
+        mockMvc
+            .perform(
+                post("/api/coursestaff/post")
+                    .with(csrf())
+                    .param("firstName", "Chris")
+                    .param("lastName", "Gaucho")
+                    .param("email", "cgaucho@example.org")
+                    .param("courseId", "2"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    // assert
+    verify(courseRepository, times(1)).findById(eq(2L));
+    verify(courseStaffRepository, times(1)).save(courseStaffCaptor.capture());
+
+    CourseStaff courseStaffSaved = courseStaffCaptor.getValue();
+    assertEquals(OrgStatus.JOINCOURSE, courseStaffSaved.getOrgStatus());
+  }
+
+  @Test
+  @WithMockUser(roles = {"ADMIN"})
+  public void testUpsertStaffWithDuplicateEmail() throws Exception {
+    // Arrange
+    CourseStaff existingStaff =
+        CourseStaff.builder()
+            .id(1L)
+            .firstName("Existing")
+            .lastName("OldName")
+            .email("cgaucho@ucsb.edu")
+            .course(course1)
+            .build();
+    CourseStaff newStaff =
+        CourseStaff.builder()
+            .id(1L)
+            .firstName("New")
+            .lastName("Student")
+            .email("cgaucho@umail.ucsb.edu")
+            .course(course1)
+            .build();
+    CourseStaff expectedSaved =
+        CourseStaff.builder()
+            .id(1L)
+            .firstName("New")
+            .lastName("Student")
+            .email("cgaucho@ucsb.edu")
+            .course(course1)
+            .build();
+
+    course1.setCourseStaff(List.of(cs2, existingStaff));
+
+    when(courseRepository.findById(eq(1L))).thenReturn(Optional.of(course1));
+    when(courseStaffRepository.save(eq(expectedSaved))).thenReturn(expectedSaved);
+    doNothing().when(updateUserService).attachUserToCourseStaff(any(CourseStaff.class));
+
+    // act
+
+    MvcResult response =
+        mockMvc
+            .perform(
+                post("/api/coursestaff/post")
+                    .with(csrf())
+                    .param("firstName", "New")
+                    .param("lastName", "Student")
+                    .param("email", "cgaucho@umail.ucsb.edu")
+                    .param("courseId", "1"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    // assert
+
+    String responseString = response.getResponse().getContentAsString();
+    StaffUpsertResponse upsertResponse =
+        mapper.readValue(responseString, StaffUpsertResponse.class);
+    assertEquals(InsertStatus.UPDATED, upsertResponse.insertStatus());
+    verify(courseRepository, times(1)).findById(eq(1L));
+    verify(courseStaffRepository, times(1)).save(eq(expectedSaved));
+  }
+
+  /** Test that the POST endpoint converts @umail.ucsb.edu to @ucsb.edu */
+  @Test
+  @WithInstructorCoursePermissions
+  public void testPostCourseStaff_withUmail() throws Exception {
+
+    CourseStaff csUmail =
+        CourseStaff.builder()
+            .firstName("Chris")
+            .lastName("Gaucho")
+            .email("cgaucho@ucsb.edu")
+            .course(course1)
+            .orgStatus(OrgStatus.PENDING)
+            .build();
+
+    when(courseRepository.findById(eq(1L))).thenReturn(Optional.of(course1));
+    when(courseStaffRepository.save(eq(csUmail))).thenReturn(csUmail);
+    doNothing().when(updateUserService).attachUserToCourseStaff(any(CourseStaff.class));
+    // act
+
+    MvcResult response =
+        mockMvc
+            .perform(
+                post("/api/coursestaff/post")
+                    .with(csrf())
+                    .param("firstName", "Chris")
+                    .param("lastName", "Gaucho")
+                    .param("email", "cgaucho@umail.ucsb.edu")
+                    .param("courseId", "1"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    // assert
+
+    verify(courseRepository, times(1)).findById(eq(1L));
+    verify(courseStaffRepository, times(1)).save(eq(csUmail));
+    verify(updateUserService, times(1)).attachUserToCourseStaff(eq(csUmail));
+
+    String responseString = response.getResponse().getContentAsString();
+    StaffUpsertResponse upsertResponse =
+        mapper.readValue(responseString, StaffUpsertResponse.class);
+    assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
+  }
+
   /** Test the POST endpoint */
   @Test
   @WithMockUser(roles = {"ADMIN"})
@@ -86,6 +273,7 @@ public class CourseStaffControllerTests extends ControllerTestCase {
         Course.builder()
             .id(1L)
             .courseName("CS156")
+            .courseStaff(List.of())
             .orgName("ucsb-cs156-s25")
             .term("S25")
             .school(School.UCSB)
@@ -125,8 +313,9 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(updateUserService).attachUserToCourseStaff(any(CourseStaff.class));
 
     String responseString = response.getResponse().getContentAsString();
-    String expectedJson = mapper.writeValueAsString(cs2);
-    assertEquals(expectedJson, responseString);
+    StaffUpsertResponse upsertResponse =
+        mapper.readValue(responseString, StaffUpsertResponse.class);
+    assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
   /** Test the POST endpoint email sanitization */
@@ -138,6 +327,7 @@ public class CourseStaffControllerTests extends ControllerTestCase {
         Course.builder()
             .id(1L)
             .courseName("CS156")
+            .courseStaff(List.of())
             .orgName("ucsb-cs156-s25")
             .term("S25")
             .school(School.UCSB)
@@ -177,8 +367,9 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(updateUserService).attachUserToCourseStaff(any(CourseStaff.class));
 
     String responseString = response.getResponse().getContentAsString();
-    String expectedJson = mapper.writeValueAsString(cs2);
-    assertEquals(expectedJson, responseString);
+    StaffUpsertResponse upsertResponse =
+        mapper.readValue(responseString, StaffUpsertResponse.class);
+    assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
   /** Test the POST endpoint */
@@ -190,6 +381,7 @@ public class CourseStaffControllerTests extends ControllerTestCase {
         Course.builder()
             .id(1L)
             .courseName("CS156")
+            .courseStaff(List.of())
             .orgName("ucsb-cs156-s25")
             .installationId("12345")
             .term("S25")
@@ -228,8 +420,9 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(courseStaffRepository, times(1)).save(eq(cs2));
 
     String responseString = response.getResponse().getContentAsString();
-    String expectedJson = mapper.writeValueAsString(cs2);
-    assertEquals(expectedJson, responseString);
+    StaffUpsertResponse upsertResponse =
+        mapper.readValue(responseString, StaffUpsertResponse.class);
+    assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
   /**

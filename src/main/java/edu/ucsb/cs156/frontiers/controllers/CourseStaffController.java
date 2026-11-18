@@ -2,16 +2,20 @@ package edu.ucsb.cs156.frontiers.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import edu.ucsb.cs156.frontiers.entities.*;
+import edu.ucsb.cs156.frontiers.enums.InsertStatus;
 import edu.ucsb.cs156.frontiers.enums.OrgStatus;
 import edu.ucsb.cs156.frontiers.errors.EntityNotFoundException;
+import edu.ucsb.cs156.frontiers.models.StaffUpsertResponse;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.services.*;
+import edu.ucsb.cs156.frontiers.utilities.CanonicalFormConverter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -36,14 +40,15 @@ public class CourseStaffController extends ApiController {
   @Autowired private CurrentUserService currentUserService;
 
   /**
-   * This method creates a new CourseStaff.
+   * This method creates a new CourseStaff. It is important to keep the code in this method
+   * consistent with the code for adding multiple course staff from a CSV
    *
    * @return the created CourseStaff
    */
   @Operation(summary = "Add a staff member to a course")
   @PreAuthorize("@CourseSecurity.hasInstructorPermissions(#root, #courseId)")
   @PostMapping("/post")
-  public CourseStaff postCourseStaff(
+  public ResponseEntity<StaffUpsertResponse> postCourseStaff(
       @Parameter(name = "firstName") @RequestParam String firstName,
       @Parameter(name = "lastName") @RequestParam String lastName,
       @Parameter(name = "email") @RequestParam String email,
@@ -58,24 +63,37 @@ public class CourseStaffController extends ApiController {
             .orElseThrow(() -> new EntityNotFoundException(Course.class, courseId));
 
     CourseStaff courseStaff =
-        CourseStaff.builder()
-            .firstName(firstName)
-            .lastName(lastName)
-            .email(email.strip())
-            .course(course)
-            .build();
+        CourseStaff.builder().firstName(firstName).lastName(lastName).email(email.strip()).build();
 
-    if (course.getInstallationId() != null) {
-      courseStaff.setOrgStatus(OrgStatus.JOINCOURSE);
+    StaffUpsertResponse upsertResponse = upsertStaff(courseStaff, course);
+    courseStaff = courseStaffRepository.save(upsertResponse.courseStaff());
+    updateUserService.attachUserToCourseStaff(courseStaff);
+    return ResponseEntity.ok(upsertResponse);
+  }
+
+  public static StaffUpsertResponse upsertStaff(CourseStaff staff, Course course) {
+    String convertedEmail = CanonicalFormConverter.convertToValidEmail(staff.getEmail()).strip();
+    Optional<CourseStaff> existingStaffByEmail =
+        course.getCourseStaff().stream()
+            .filter(filteringStaff -> convertedEmail.equals(filteringStaff.getEmail()))
+            .findFirst();
+    if (existingStaffByEmail.isPresent()) {
+      CourseStaff existingStaffObj = existingStaffByEmail.get();
+      existingStaffObj.setFirstName(staff.getFirstName());
+      existingStaffObj.setLastName(staff.getLastName());
+      return new StaffUpsertResponse(InsertStatus.UPDATED, existingStaffObj);
     } else {
-      courseStaff.setOrgStatus(OrgStatus.PENDING);
+      staff.setCourse(course);
+      staff.setEmail(convertedEmail);
+      // if an installationID exists, orgStatus should be set to JOINCOURSE. if it doesn't exist
+      // (null), set orgStatus to PENDING.
+      if (course.getInstallationId() != null) {
+        staff.setOrgStatus(OrgStatus.JOINCOURSE);
+      } else {
+        staff.setOrgStatus(OrgStatus.PENDING);
+      }
+      return new StaffUpsertResponse(InsertStatus.INSERTED, staff);
     }
-
-    CourseStaff savedCourseStaff = courseStaffRepository.save(courseStaff);
-
-    updateUserService.attachUserToCourseStaff(savedCourseStaff);
-
-    return savedCourseStaff;
   }
 
   /**

@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { useBackend } from "main/utils/useBackend";
 import {
   EMAIL_FORMATS,
+  EMAIL_TYPES,
   courseEmailsQueryKey,
 } from "main/utils/courseEmailsUtils";
 
@@ -15,17 +16,19 @@ import {
 export default function CourseEmailsCard({
   courseId,
   type,
+  showTypeDropdown = false,
   testIdPrefix = "CourseEmailsCard",
 }) {
+  const [selectedType, setSelectedType] = useState(type);
   const [format, setFormat] = useState(EMAIL_FORMATS[0].value);
 
   const { data: emails } = useBackend(
-    [courseEmailsQueryKey(courseId), type, format],
+    [courseEmailsQueryKey(courseId), selectedType, format],
     {
       // Stryker disable next-line StringLiteral : GET and empty string are equivalent
       method: "GET",
       url: "/api/courses/emails",
-      params: { courseId, type, format },
+      params: { courseId, type: selectedType, format },
     },
     "",
     true,
@@ -46,6 +49,22 @@ export default function CourseEmailsCard({
         <Accordion.Item eventKey="emails">
           <Accordion.Header>Emails</Accordion.Header>
           <Accordion.Body>
+            {showTypeDropdown && (
+              <Form.Group className="mb-3" controlId={`${testIdPrefix}-type`}>
+                <Form.Label>Type</Form.Label>
+                <Form.Select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  data-testid={`${testIdPrefix}-type`}
+                >
+                  {EMAIL_TYPES.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            )}
             <Form.Group className="mb-3" controlId={`${testIdPrefix}-format`}>
               <Form.Label>Format</Form.Label>
               <Form.Select

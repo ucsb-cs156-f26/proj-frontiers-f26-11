@@ -313,7 +313,7 @@ describe("InstructorCourseShowPage tests", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByText("Students")).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Students" })).toHaveAttribute(
       "data-rr-ui-event-key",
       "students",
     );
@@ -324,6 +324,10 @@ describe("InstructorCourseShowPage tests", () => {
     expect(screen.getByRole("tab", { name: "Teams" })).toHaveAttribute(
       "data-rr-ui-event-key",
       "teams",
+    );
+    expect(screen.getByRole("tab", { name: "Emails" })).toHaveAttribute(
+      "data-rr-ui-event-key",
+      "emails",
     );
     expect(screen.getByText("Assignments")).toHaveAttribute(
       "data-rr-ui-event-key",
@@ -345,7 +349,7 @@ describe("InstructorCourseShowPage tests", () => {
       "data-rr-ui-event-key",
       "downloads",
     );
-    const changeTabs = screen.getByText("Students");
+    const changeTabs = screen.getByRole("tab", { name: "Students" });
     fireEvent.click(changeTabs);
 
     const downloadsTab = screen.getByText("Downloads");
@@ -1116,6 +1120,7 @@ describe("InstructorCourseShowPage tests", () => {
         "Students",
         "Staff",
         "Teams",
+        "Emails",
         "Assignments",
         "New Assignments",
         "Jobs",
@@ -1263,6 +1268,7 @@ describe("InstructorCourseShowPage tests", () => {
         "Students",
         "Staff",
         "Teams",
+        "Emails",
         "Assignments",
         "Jobs",
         "Downloads",
@@ -1378,6 +1384,7 @@ describe("InstructorCourseShowPage tests", () => {
         "Students",
         "Staff",
         "Teams",
+        "Emails",
         "Assignments",
         "Jobs",
         "Downloads",
@@ -1489,6 +1496,7 @@ describe("InstructorCourseShowPage tests", () => {
         "Students",
         "Staff",
         "Teams",
+        "Emails",
         "Assignments",
         "Jobs",
         "Downloads",
@@ -1541,6 +1549,105 @@ describe("InstructorCourseShowPage tests", () => {
 
       expect(
         screen.queryByRole("tab", { name: "EduDora" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("CATME tab", () => {
+    const setupCourse7WithCatmeOption = (enableCatme) => {
+      setupInstructorUser();
+      axiosMock.onGet("/api/courses/7").reply(200, {
+        ...coursesFixtures.severalCourses[0],
+        id: 7,
+      });
+      axiosMock.onGet("/api/course/options").reply(200, {
+        ENABLE_CANVAS: false,
+        TRANSLATE_SECTIONS: false,
+        DOKKU_MANAGER: false,
+        ENABLE_EDUDORA: false,
+        ENABLE_CATME: enableCatme,
+      });
+    };
+
+    const renderPage = () =>
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={["/instructor/courses/7"]}>
+            <Routes>
+              <Route
+                path="/instructor/courses/:id"
+                element={<InstructorCourseShowPage />}
+              />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+
+    test("is shown, between Downloads and Settings, when the ENABLE_CATME option is enabled", async () => {
+      setupCourse7WithCatmeOption(true);
+
+      renderPage();
+
+      const catmeTab = await screen.findByRole("tab", { name: "CATME" });
+      expect(catmeTab).toHaveAttribute("data-rr-ui-event-key", "catme");
+      const tabNames = screen.getAllByRole("tab").map((tab) => tab.textContent);
+      expect(tabNames).toEqual([
+        "Students",
+        "Staff",
+        "Teams",
+        "Emails",
+        "Assignments",
+        "Jobs",
+        "Downloads",
+        "CATME",
+        "Settings",
+      ]);
+
+      fireEvent.click(catmeTab);
+      expect(catmeTab).toHaveAttribute("aria-selected", "true");
+      const tab = screen.getByTestId(
+        "InstructorCourseShowPage-catme-tab-component",
+      );
+      expect(tab.parentElement).toHaveClass("pt-2");
+      expect(tab).toHaveTextContent("CATME features coming soon");
+    });
+
+    test("is hidden when the ENABLE_CATME option is disabled", async () => {
+      setupCourse7WithCatmeOption(false);
+
+      renderPage();
+
+      await screen.findByTestId("InstructorCourseShowPage-title");
+      await waitFor(() =>
+        expect(
+          axiosMock.history.get.some(
+            (request) => request.url === "/api/course/options",
+          ),
+        ).toBe(true),
+      );
+
+      expect(
+        screen.queryByRole("tab", { name: "CATME" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("InstructorCourseShowPage-catme-tab-component"),
+      ).not.toBeInTheDocument();
+    });
+
+    test("is hidden when the ENABLE_CATME option is not strictly true", async () => {
+      setupCourse7WithCatmeOption("unexpected");
+
+      renderPage();
+
+      await screen.findByTestId("InstructorCourseShowPage-title");
+      await waitFor(() =>
+        expect(
+          queryClient.getQueryData(["/api/course/options/?courseId=7"]),
+        ).toEqual(expect.objectContaining({ ENABLE_CATME: "unexpected" })),
+      );
+
+      expect(
+        screen.queryByRole("tab", { name: "CATME" }),
       ).not.toBeInTheDocument();
     });
   });
@@ -2087,6 +2194,24 @@ describe("InstructorCourseShowPage tests", () => {
       ).not.toBeInTheDocument();
       expect(screen.getByTestId("location-probe").textContent).toBe(
         "/instructor/courses/7?tab=edudora",
+      );
+    });
+
+    test("?tab=catme shows the Assignments tab when the Enable CATME option is off", async () => {
+      setupCourse7({ ENABLE_CATME: false });
+      renderAt("/instructor/courses/7?tab=catme");
+      await screen.findByRole("tab", { name: "Settings" });
+      await waitFor(() =>
+        expect(
+          queryClient.getQueryData(["/api/course/options/?courseId=7"]),
+        ).toEqual(expect.objectContaining({ ENABLE_CATME: false })),
+      );
+      expect(selectedTab()).toEqual(["Assignments"]);
+      expect(
+        screen.queryByRole("tab", { name: "CATME" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("location-probe").textContent).toBe(
+        "/instructor/courses/7?tab=catme",
       );
     });
 

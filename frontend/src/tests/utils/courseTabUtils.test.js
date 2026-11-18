@@ -22,6 +22,7 @@ describe("courseTabUtils tests", () => {
       "students",
       "staff",
       "teams",
+      "emails",
       "sections",
       "assignments",
       "new-assignments",
@@ -31,6 +32,7 @@ describe("courseTabUtils tests", () => {
       "slack",
       "api-keys",
       "edudora",
+      "catme",
       "settings",
     ]);
     expect(DEFAULT_COURSE_TAB).toBe("assignments");

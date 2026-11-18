@@ -11,6 +11,7 @@ import AssignmentTabComponent from "main/components/TabComponent/AssignmentTabCo
 import NewAssignmentsTabComponent from "main/components/TabComponent/NewAssignmentsTabComponent";
 import EnrollmentTabComponent from "main/components/TabComponent/EnrollmentTabComponent";
 import StaffTabComponent from "main/components/TabComponent/StaffTabComponent";
+import EmailsTabComponent from "main/components/TabComponent/EmailsTabComponent";
 import GithubSettingIcon from "main/components/Common/GithubSettingIcon";
 import TeamsTabComponent from "main/components/TabComponent/TeamsTabComponent";
 import { CourseWarningBanner } from "main/components/Courses/CourseWarningBanner";
@@ -24,6 +25,7 @@ import SlackTabComponent from "main/components/TabComponent/SlackTabComponent";
 import DokkuTabComponent from "main/components/TabComponent/DokkuTabComponent";
 import ApiKeysTabComponent from "main/components/TabComponent/ApiKeysTabComponent";
 import EduDoraTabComponent from "main/components/TabComponent/EduDoraTabComponent";
+import CatmeTabComponent from "main/components/TabComponent/CatmeTabComponent";
 import { slackInfoQueryKey } from "main/utils/slackUtils";
 import {
   COURSE_TABS,
@@ -85,6 +87,10 @@ export default function InstructorCourseShowPage({
   // enabled.
   const showEduDoraTab = courseOptions.ENABLE_EDUDORA === true;
 
+  // The CATME tab is only shown when the ENABLE_CATME course option is
+  // enabled.
+  const showCatmeTab = courseOptions.ENABLE_CATME === true;
+
   // The Slack tab is only shown when the SLACK_INTEGRATION course option is
   // enabled and a Slack token has been saved. The query key is shared with the
   // Slack card on the Settings tab, so saving a token there shows the tab.
@@ -112,6 +118,7 @@ export default function InstructorCourseShowPage({
       (tab !== "slack" || showSlackTab) &&
       (tab !== "api-keys" || showApiKeysTab) &&
       (tab !== "edudora" || showEduDoraTab) &&
+      (tab !== "catme" || showCatmeTab) &&
       (tab !== "settings" || showSettingsTab),
   );
   const activeTab = chooseCourseTab({
@@ -265,6 +272,10 @@ export default function InstructorCourseShowPage({
             canManageTeams={canManageTeams}
           />
         </Tab>
+
+        <Tab eventKey={"emails"} title={"Emails"} className="pt-2">
+          <EmailsTabComponent courseId={courseId} testIdPrefix={testId} />
+        </Tab>
         {showSectionsTab && (
           <Tab eventKey={"sections"} title={"Sections"} className="pt-2">
             <SectionsTabComponent courseId={courseId} testIdPrefix={testId} />
@@ -325,6 +336,11 @@ export default function InstructorCourseShowPage({
         {showEduDoraTab && (
           <Tab eventKey={"edudora"} title={"EduDora"} className="pt-2">
             <EduDoraTabComponent testIdPrefix={testId} />
+          </Tab>
+        )}
+        {showCatmeTab && (
+          <Tab eventKey={"catme"} title={"CATME"} className="pt-2">
+            <CatmeTabComponent testIdPrefix={testId} />
           </Tab>
         )}
         {showSettingsTab && (
