@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RepositoryController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">frontiers</a> &gt; <a href="index.source.html" class="el_package">edu.ucsb.cs156.frontiers.controllers</a> &gt; <span class="el_source">RepositoryController.java</span></div><h1>RepositoryController.java</h1><pre class="source lang-java linenums">package edu.ucsb.cs156.frontiers.controllers;
+
+import edu.ucsb.cs156.frontiers.entities.Course;
+import edu.ucsb.cs156.frontiers.enums.RepositoryCreationOption;
+import edu.ucsb.cs156.frontiers.enums.RepositoryPermissions;
+import edu.ucsb.cs156.frontiers.errors.EntityNotFoundException;
+import edu.ucsb.cs156.frontiers.errors.NoLinkedOrganizationException;
+import edu.ucsb.cs156.frontiers.jobs.CreateStudentOrStaffRepositoriesJob;
+import edu.ucsb.cs156.frontiers.jobs.CreateTeamRepositoriesJob;
+import edu.ucsb.cs156.frontiers.jobs.DeleteRepoJob;
+import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
+import edu.ucsb.cs156.frontiers.services.GithubTeamService;
+import edu.ucsb.cs156.frontiers.services.RepositoryService;
+import edu.ucsb.cs156.jobs.entities.Job;
+import edu.ucsb.cs156.jobs.services.JobService;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
+@Tag(name = &quot;Repository Controller&quot;)
+@RestController
+@RequestMapping(&quot;/api/repos&quot;)
+<span class="fc" id="L31">public class RepositoryController extends ApiController {</span>
+
+  @Autowired RepositoryService repositoryService;
+
+  @Autowired JobService jobService;
+
+  @Autowired CourseRepository courseRepository;
+
+  @Autowired GithubTeamService githubTeamService;
+
+  /**
+   * Fires a job that creates a repo for every RosterStudent with a linked user with a GitHub
+   * account.
+   *
+   * @param courseId ID of course to create repos for
+   * @param repoPrefix each repo created will begin with this prefix, followed by a dash and the
+   *     student's GitHub username
+   * @param isPrivate determines whether the repository being created is private
+   * @return the {@link edu.ucsb.cs156.jobs.entities.Job Job} started to create the repos.
+   */
+  @PostMapping(&quot;/createRepos&quot;)
+  @PreAuthorize(&quot;@CourseSecurity.hasManagePermissions(#root, #courseId)&quot;)
+  public Job createRepos(
+      @RequestParam Long courseId,
+      @RequestParam String repoPrefix,
+      @RequestParam Optional&lt;Boolean&gt; isPrivate,
+      @RequestParam RepositoryPermissions permissions,
+      @RequestParam(required = false, defaultValue = &quot;STUDENTS_ONLY&quot;)
+          RepositoryCreationOption creationOption) {
+<span class="fc" id="L60">    Course course =</span>
+        courseRepository
+<span class="fc" id="L62">            .findById(courseId)</span>
+<span class="fc" id="L63">            .orElseThrow(() -&gt; new EntityNotFoundException(Course.class, courseId));</span>
+<span class="fc bfc" id="L64" title="All 4 branches covered.">    if (course.getOrgName() == null || course.getInstallationId() == null) {</span>
+<span class="fc" id="L65">      throw new NoLinkedOrganizationException(course.getCourseName());</span>
+    } else {
+      CreateStudentOrStaffRepositoriesJob job =
+<span class="fc" id="L68">          CreateStudentOrStaffRepositoriesJob.builder()</span>
+<span class="fc" id="L69">              .repositoryPrefix(repoPrefix)</span>
+<span class="fc" id="L70">              .isPrivate(isPrivate.orElse(false))</span>
+<span class="fc" id="L71">              .repositoryService(repositoryService)</span>
+<span class="fc" id="L72">              .course(course)</span>
+<span class="fc" id="L73">              .permissions(permissions)</span>
+<span class="fc" id="L74">              .creationOption(creationOption)</span>
+<span class="fc" id="L75">              .build();</span>
+<span class="fc" id="L76">      return jobService.runAsJob(job);</span>
+    }
+  }
+
+  /**
+   * Fires a job that creates team repos shared by all TeamMembers of each Team in a Course .
+   *
+   * @param courseId ID of course to create team repos for
+   * @param repoPrefix each team repo created will begin with this prefix, followed by a dash and
+   *     the team's name
+   * @param isPrivate determines whether the repository being created is private
+   * @return the {@link edu.ucsb.cs156.jobs.entities.Job Job} started to create the repos.
+   */
+  @PostMapping(&quot;/createTeamRepos&quot;)
+  @PreAuthorize(&quot;@CourseSecurity.hasManagePermissions(#root, #courseId)&quot;)
+  public Job createTeamRepos(
+      @RequestParam Long courseId,
+      @RequestParam String repoPrefix,
+      @RequestParam Optional&lt;Boolean&gt; isPrivate,
+      @RequestParam Optional&lt;String&gt; teamRegex,
+      @RequestParam RepositoryPermissions permissions) {
+<span class="fc" id="L97">    Course course =</span>
+        courseRepository
+<span class="fc" id="L99">            .findById(courseId)</span>
+<span class="fc" id="L100">            .orElseThrow(() -&gt; new EntityNotFoundException(Course.class, courseId));</span>
+<span class="fc bfc" id="L101" title="All 4 branches covered.">    if (course.getOrgName() == null || course.getInstallationId() == null) {</span>
+<span class="fc" id="L102">      throw new NoLinkedOrganizationException(course.getCourseName());</span>
+    } else {
+      CreateTeamRepositoriesJob job =
+<span class="fc" id="L105">          CreateTeamRepositoriesJob.builder()</span>
+<span class="fc" id="L106">              .repositoryPrefix(repoPrefix)</span>
+<span class="fc" id="L107">              .isPrivate(isPrivate.orElse(false))</span>
+<span class="fc" id="L108">              .repositoryService(repositoryService)</span>
+<span class="fc" id="L109">              .githubTeamService(githubTeamService)</span>
+<span class="fc" id="L110">              .course(course)</span>
+<span class="fc" id="L111">              .permissions(permissions)</span>
+<span class="fc" id="L112">              .teamRegex(teamRegex.orElse(null))</span>
+<span class="fc" id="L113">              .build();</span>
+<span class="fc" id="L114">      return jobService.runAsJob(job);</span>
+    }
+  }
+
+  /**
+   * Fires a job that deletes every empty repository in the course's GitHub organization whose name
+   * starts with the given prefix. Repositories that contain commits are never deleted.
+   *
+   * @param courseId ID of the course whose organization is searched
+   * @param prefix only repositories whose names start with this prefix are considered
+   * @return the {@link edu.ucsb.cs156.jobs.entities.Job Job} started to delete the repos.
+   */
+  @DeleteMapping(&quot;&quot;)
+  @PreAuthorize(&quot;@CourseSecurity.hasManagePermissions(#root, #courseId)&quot;)
+  public Job deleteRepos(@RequestParam Long courseId, @RequestParam String prefix) {
+<span class="fc bfc" id="L129" title="All 2 branches covered.">    if (prefix.isBlank()) {</span>
+<span class="fc" id="L130">      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;prefix must not be blank&quot;);</span>
+    }
+<span class="fc" id="L132">    Course course =</span>
+        courseRepository
+<span class="fc" id="L134">            .findById(courseId)</span>
+<span class="fc" id="L135">            .orElseThrow(() -&gt; new EntityNotFoundException(Course.class, courseId));</span>
+<span class="fc bfc" id="L136" title="All 4 branches covered.">    if (course.getOrgName() == null || course.getInstallationId() == null) {</span>
+<span class="fc" id="L137">      throw new NoLinkedOrganizationException(course.getCourseName());</span>
+    }
+    DeleteRepoJob job =
+<span class="fc" id="L140">        DeleteRepoJob.builder()</span>
+<span class="fc" id="L141">            .courseId(courseId)</span>
+<span class="fc" id="L142">            .prefix(prefix)</span>
+<span class="fc" id="L143">            .courseRepository(courseRepository)</span>
+<span class="fc" id="L144">            .repositoryService(repositoryService)</span>
+<span class="fc" id="L145">            .build();</span>
+<span class="fc" id="L146">    return jobService.runAsJob(job);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
