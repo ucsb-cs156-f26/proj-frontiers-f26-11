@@ -229,7 +229,7 @@ public class RosterStudentsCSVControllerTests extends ControllerTestCase {
         .attachUsersToRosterStudents(List.of(rs1AfterWithId, rs2AfterWithId, rs3NoId));
 
     String responseString = response.getResponse().getContentAsString();
-    LoadResult expectedResult = new LoadResult(1, 2, 0, List.of());
+    LoadResult<RosterStudent> expectedResult = new LoadResult<>(1, 2, 0, List.of());
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }
@@ -293,7 +293,8 @@ public class RosterStudentsCSVControllerTests extends ControllerTestCase {
 
     verify(rosterStudentRepository, never()).saveAll(List.of());
     String responseString = response.getResponse().getContentAsString();
-    LoadResult expectedResult = new LoadResult(0, 0, 0, List.of(rosterStudentRejected));
+    LoadResult<RosterStudent> expectedResult =
+        new LoadResult<>(0, 0, 0, List.of(rosterStudentRejected));
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }
@@ -358,7 +359,7 @@ public class RosterStudentsCSVControllerTests extends ControllerTestCase {
     assertTrue(rosterStudentCaptor.getValue().contains(droppedStudentUpdated));
     assertTrue(rosterStudentCaptor.getValue().contains(noUpdateNoDrop));
     String responseString = response.getResponse().getContentAsString();
-    LoadResult expectedResult = new LoadResult(3, 0, 1, List.of());
+    LoadResult<RosterStudent> expectedResult = new LoadResult<>(3, 0, 1, List.of());
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }
@@ -416,7 +417,7 @@ public class RosterStudentsCSVControllerTests extends ControllerTestCase {
     assertTrue(rosterStudentCaptor.getValue().contains(rosterStudent1Updated));
     assertTrue(rosterStudentCaptor.getValue().contains(rosterStudent2Updated));
     String responseString = response.getResponse().getContentAsString();
-    LoadResult expectedResult = new LoadResult(1, 2, 0, List.of());
+    LoadResult<RosterStudent> expectedResult = new LoadResult<>(1, 2, 0, List.of());
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }
@@ -601,7 +602,7 @@ public class RosterStudentsCSVControllerTests extends ControllerTestCase {
 
     String responseString = response.getResponse().getContentAsString();
     // 1 inserted (Ralph, first row), 2 updated (Marge, and Ralph's duplicate second row)
-    LoadResult expectedResult = new LoadResult(1, 2, 0, List.of());
+    LoadResult<RosterStudent> expectedResult = new LoadResult<>(1, 2, 0, List.of());
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }

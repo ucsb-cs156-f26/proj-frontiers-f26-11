@@ -118,7 +118,7 @@ public class CanvasControllerTests extends ControllerTestCase {
     assertEquals(2, course.getRosterStudents().size());
 
     String responseString = response.getResponse().getContentAsString();
-    LoadResult expectedResult = new LoadResult(2, 0, 0, List.of());
+    LoadResult<RosterStudent> expectedResult = new LoadResult<>(2, 0, 0, List.of());
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }
@@ -176,7 +176,7 @@ public class CanvasControllerTests extends ControllerTestCase {
     verify(canvasService).getCanvasRoster(any(Course.class));
 
     String responseString = response.getResponse().getContentAsString();
-    LoadResult expectedResult = new LoadResult(0, 1, 0, List.of());
+    LoadResult<RosterStudent> expectedResult = new LoadResult<>(0, 1, 0, List.of());
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }
@@ -233,7 +233,7 @@ public class CanvasControllerTests extends ControllerTestCase {
             .studentId("A111111")
             .email("alice@ucsb.edu")
             .build();
-    LoadResult expectedResult = new LoadResult(0, 0, 0, List.of(rejectedStudent));
+    LoadResult<RosterStudent> expectedResult = new LoadResult<>(0, 0, 0, List.of(rejectedStudent));
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }
@@ -293,7 +293,7 @@ public class CanvasControllerTests extends ControllerTestCase {
     assertEquals(RosterStatus.DROPPED, existingStudent.getRosterStatus());
 
     String responseString = response.getResponse().getContentAsString();
-    LoadResult expectedResult = new LoadResult(1, 0, 1, List.of());
+    LoadResult<RosterStudent> expectedResult = new LoadResult<>(1, 0, 1, List.of());
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }
@@ -462,7 +462,7 @@ public class CanvasControllerTests extends ControllerTestCase {
     assertEquals(RosterStatus.MANUAL, manualStudent.getRosterStatus());
 
     String responseString = response.getResponse().getContentAsString();
-    LoadResult expectedResult = new LoadResult(1, 0, 0, List.of());
+    LoadResult<RosterStudent> expectedResult = new LoadResult<>(1, 0, 0, List.of());
     String expectedJson = mapper.writeValueAsString(expectedResult);
     assertEquals(expectedJson, responseString);
   }

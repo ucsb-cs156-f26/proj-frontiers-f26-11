@@ -116,7 +116,7 @@ public class RosterStudentsCSVController extends ApiController {
   @PostMapping(
       value = "/upload/csv",
       consumes = {"multipart/form-data"})
-  public ResponseEntity<LoadResult> uploadRosterStudentsCSV(
+  public ResponseEntity<LoadResult<RosterStudent>> uploadRosterStudentsCSV(
       @Parameter(name = "courseId") @RequestParam Long courseId,
       @Parameter(name = "file") @RequestParam("file") MultipartFile file)
       throws JsonProcessingException, IOException, CsvException {
@@ -148,14 +148,14 @@ public class RosterStudentsCSVController extends ApiController {
       List<String[]> myEntries = csvReader.readAll();
       for (String[] row : myEntries) {
         RosterStudent rosterStudent = fromCSVRow(row, sourceType);
-        UpsertResponse upsertResponse =
+        UpsertResponse<RosterStudent> upsertResponse =
             RosterStudentsController.upsertStudent(rosterStudent, course, RosterStatus.ROSTER);
         if (upsertResponse.getInsertStatus() == InsertStatus.REJECTED) {
-          rejectedStudents.add(upsertResponse.rosterStudent());
+          rejectedStudents.add(upsertResponse.entity());
         } else {
           InsertStatus s = upsertResponse.getInsertStatus();
           if (s == InsertStatus.INSERTED) {
-            course.getRosterStudents().add(upsertResponse.rosterStudent());
+            course.getRosterStudents().add(upsertResponse.entity());
           }
           counts[s.ordinal()]++;
         }
@@ -166,8 +166,8 @@ public class RosterStudentsCSVController extends ApiController {
           course.getRosterStudents().stream()
               .filter(student -> student.getRosterStatus() == RosterStatus.DROPPED)
               .toList();
-      LoadResult successfulResult =
-          new LoadResult(
+      LoadResult<RosterStudent> successfulResult =
+          new LoadResult<>(
               counts[InsertStatus.INSERTED.ordinal()],
               counts[InsertStatus.UPDATED.ordinal()],
               droppedStudents.size(),
@@ -183,7 +183,7 @@ public class RosterStudentsCSVController extends ApiController {
       jobService.runAsJob(job);
       return ResponseEntity.ok(successfulResult);
     } else {
-      LoadResult conflictResult = new LoadResult(0, 0, 0, rejectedStudents);
+      LoadResult<RosterStudent> conflictResult = new LoadResult<>(0, 0, 0, rejectedStudents);
       return ResponseEntity.status(HttpStatus.CONFLICT).body(conflictResult);
     }
   }
