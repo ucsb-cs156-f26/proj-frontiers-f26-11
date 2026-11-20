@@ -23,7 +23,9 @@ const BTN = "InstructorCourseShowPage-btn-download-catme-csv";
 const courseId = coursesFixtures.severalCourses[0].id;
 
 const renderComponent = (id = courseId) =>
-  render(<CatmeTabComponent courseId={id} testIdPrefix="InstructorCourseShowPage" />);
+  render(
+    <CatmeTabComponent courseId={id} testIdPrefix="InstructorCourseShowPage" />,
+  );
 
 describe("CatmeTabComponent tests", () => {
   let clickedAnchor;
