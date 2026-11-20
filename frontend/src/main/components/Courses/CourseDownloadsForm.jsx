@@ -23,7 +23,7 @@ export default function CourseDownloadsForm({ downloadAction, testIdPrefix }) {
         variant="primary"
         data-testid={`${testIdPrefix}-btn-download-students-csv`}
       >
-        Download Students CSV
+        Download Formatted Student/Teams Chart as CSV
       </Button>
     </Form>
   );
