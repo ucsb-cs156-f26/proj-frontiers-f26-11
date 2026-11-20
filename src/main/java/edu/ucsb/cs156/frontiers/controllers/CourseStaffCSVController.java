@@ -4,8 +4,10 @@ import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvException;
 import edu.ucsb.cs156.frontiers.entities.Course;
 import edu.ucsb.cs156.frontiers.entities.CourseStaff;
-import edu.ucsb.cs156.frontiers.enums.OrgStatus;
+import edu.ucsb.cs156.frontiers.enums.InsertStatus;
 import edu.ucsb.cs156.frontiers.errors.EntityNotFoundException;
+import edu.ucsb.cs156.frontiers.models.StaffLoadResult;
+import edu.ucsb.cs156.frontiers.models.StaffUpsertResponse;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.services.UpdateUserService;
@@ -16,10 +18,11 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Map;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,7 +50,7 @@ public class CourseStaffCSVController extends ApiController {
   @PostMapping(
       value = "/upload/csv",
       consumes = {"multipart/form-data"})
-  public Map<String, Integer> uploadStaffCSV(
+  public ResponseEntity<StaffLoadResult> uploadStaffCSV(
       @Parameter(name = "courseId") @RequestParam Long courseId,
       @Parameter(name = "file") @RequestParam("file") MultipartFile file)
       throws IOException, CsvException {
@@ -57,7 +60,7 @@ public class CourseStaffCSVController extends ApiController {
             .findById(courseId)
             .orElseThrow(() -> new EntityNotFoundException(Course.class, courseId.toString()));
 
-    int count = 0;
+    int counts[] = {0, 0};
 
     try (InputStream inputStream = new BufferedInputStream(file.getInputStream());
         InputStreamReader reader = new InputStreamReader(inputStream);
@@ -70,8 +73,8 @@ public class CourseStaffCSVController extends ApiController {
 
       validateHeaders(headers);
 
-      String[] row;
-      while ((row = csvReader.readNext()) != null) {
+      List<String[]> myEntries = csvReader.readAll();
+      for (String[] row : myEntries) {
         if (row.length < 3) {
           throw new ResponseStatusException(
               HttpStatus.BAD_REQUEST,
@@ -87,19 +90,21 @@ public class CourseStaffCSVController extends ApiController {
                 .course(course)
                 .build();
 
-        if (course.getInstallationId() != null) {
-          courseStaff.setOrgStatus(OrgStatus.JOINCOURSE);
-        } else {
-          courseStaff.setOrgStatus(OrgStatus.PENDING);
+        StaffUpsertResponse upsertResponse = CourseStaffController.upsertStaff(courseStaff, course);
+        InsertStatus s = upsertResponse.getInsertStatus();
+        if (s == InsertStatus.INSERTED) {
+          course.getCourseStaff().add(upsertResponse.courseStaff());
         }
-
-        CourseStaff savedCourseStaff = courseStaffRepository.save(courseStaff);
-        updateUserService.attachUserToCourseStaff(savedCourseStaff);
-        count++;
+        counts[s.ordinal()]++;
       }
     }
 
-    return Map.of("count", count);
+    StaffLoadResult successfulResult =
+        new StaffLoadResult(
+            counts[InsertStatus.INSERTED.ordinal()], counts[InsertStatus.UPDATED.ordinal()]);
+    courseStaffRepository.saveAll(course.getCourseStaff());
+    course.getCourseStaff().forEach(updateUserService::attachUserToCourseStaff);
+    return ResponseEntity.ok(successfulResult);
   }
 
   static void validateHeaders(String[] headers) {

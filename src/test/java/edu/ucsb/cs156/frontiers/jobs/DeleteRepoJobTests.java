@@ -3,8 +3,11 @@ package edu.ucsb.cs156.frontiers.jobs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import edu.ucsb.cs156.frontiers.entities.Course;
@@ -153,7 +156,8 @@ public class DeleteRepoJobTests {
     assertTrue(jobStarted.getLog().contains("prefix=lab01"));
     assertTrue(jobStarted.getLog().contains("Deleted empty repository: lab01-student1"));
     assertTrue(jobStarted.getLog().contains("Deleted empty repository: lab01-student2"));
-    assertTrue(jobStarted.getLog().contains("Summary: found=2, deleted=2, retained=0, errors=0"));
+    assertTrue(
+        jobStarted.getLog().contains("Summary: 2 repos deleted, 0 repos retained, 0 errors"));
     assertTrue(jobStarted.getLog().contains("Done"));
   }
 
@@ -191,7 +195,8 @@ public class DeleteRepoJobTests {
     verify(repositoryService).deleteRepositoryIfEmpty(course, "lab01-student2");
     assertTrue(jobStarted.getLog().contains("Deleted empty repository: lab01-student1"));
     assertTrue(jobStarted.getLog().contains("Retained repository with commits: lab01-student2"));
-    assertTrue(jobStarted.getLog().contains("Summary: found=2, deleted=1, retained=1, errors=0"));
+    assertTrue(
+        jobStarted.getLog().contains("Summary: 1 repos deleted, 1 repos retained, 0 errors"));
   }
 
   @Test
@@ -232,7 +237,8 @@ public class DeleteRepoJobTests {
             .getLog()
             .contains("ERROR: Failed to delete/check repository lab01-student1: GitHub API error"));
     assertTrue(jobStarted.getLog().contains("Deleted empty repository: lab01-student2"));
-    assertTrue(jobStarted.getLog().contains("Summary: found=2, deleted=1, retained=0, errors=1"));
+    assertTrue(
+        jobStarted.getLog().contains("Summary: 1 repos deleted, 0 repos retained, 1 errors"));
   }
 
   @Test
@@ -264,6 +270,57 @@ public class DeleteRepoJobTests {
     verify(repositoryService, never()).deleteRepositoryIfEmpty(any(), any());
     assertTrue(
         jobStarted.getLog().contains("ERROR: Failed to list repositories: GitHub API error"));
-    assertTrue(jobStarted.getLog().contains("Summary: found=0, deleted=0, retained=0, errors=1"));
+    assertTrue(
+        jobStarted.getLog().contains("Summary: 0 repos deleted, 0 repos retained, 1 errors"));
+  }
+
+  @Test
+  private DeleteRepoJob.Sleeper runWithRepos(int repoCount, long delayMillis) throws Exception {
+    Long courseId = 1L;
+    Course course =
+        Course.builder()
+            .id(courseId)
+            .courseName("Test Course")
+            .orgName("test-org")
+            .installationId("123")
+            .build();
+    List<GithubRepository> repositories = new java.util.ArrayList<>();
+    for (int i = 1; i <= repoCount; i++) {
+      repositories.add(new GithubRepository("lab01-student" + i, "test-org/lab01-student" + i));
+    }
+    when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+    when(repositoryService.getRepositoriesMatchingPrefix(course, "lab01")).thenReturn(repositories);
+    when(repositoryService.deleteRepositoryIfEmpty(any(), any())).thenReturn(true);
+
+    DeleteRepoJob.Sleeper sleeper = mock(DeleteRepoJob.Sleeper.class);
+    DeleteRepoJob job =
+        DeleteRepoJob.builder()
+            .courseId(courseId)
+            .prefix("lab01")
+            .courseRepository(courseRepository)
+            .repositoryService(repositoryService)
+            .delayMillis(delayMillis)
+            .sleeper(sleeper)
+            .build();
+    job.accept(ctx);
+    return sleeper;
+  }
+
+  @Test
+  public void sleeps_between_repositories_but_not_before_the_first() throws Exception {
+    DeleteRepoJob.Sleeper sleeper = runWithRepos(3, 250);
+    verify(sleeper, times(2)).sleep(250L); // 3 repos means 2 pauses
+  }
+
+  @Test
+  public void does_not_sleep_when_delay_is_zero() throws Exception {
+    DeleteRepoJob.Sleeper sleeper = runWithRepos(3, 0);
+    verifyNoInteractions(sleeper);
+  }
+
+  @Test
+  public void does_not_sleep_for_a_single_repository() throws Exception {
+    DeleteRepoJob.Sleeper sleeper = runWithRepos(1, 250);
+    verifyNoInteractions(sleeper);
   }
 }
