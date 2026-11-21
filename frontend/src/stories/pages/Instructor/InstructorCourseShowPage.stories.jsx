@@ -534,6 +534,12 @@ ExampleCourseWithCatmeTab.parameters = {
           { status: 200 },
         );
       }),
+      http.get("/api/csv/catme", () => {
+        return new HttpResponse("first,last,email,id,section,team\n", {
+          status: 200,
+          headers: { "Content-Type": "text/csv" },
+        });
+      }),
     ],
   },
 };
