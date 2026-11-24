@@ -5,7 +5,7 @@ import edu.ucsb.cs156.frontiers.entities.*;
 import edu.ucsb.cs156.frontiers.enums.InsertStatus;
 import edu.ucsb.cs156.frontiers.enums.OrgStatus;
 import edu.ucsb.cs156.frontiers.errors.EntityNotFoundException;
-import edu.ucsb.cs156.frontiers.models.StaffUpsertResponse;
+import edu.ucsb.cs156.frontiers.models.UpsertResponse;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.services.*;
@@ -48,7 +48,7 @@ import org.springframework.web.bind.annotation.*;
   @Operation(summary = &quot;Add a staff member to a course&quot;)
   @PreAuthorize(&quot;@CourseSecurity.hasInstructorPermissions(#root, #courseId)&quot;)
   @PostMapping(&quot;/post&quot;)
-  public ResponseEntity&lt;StaffUpsertResponse&gt; postCourseStaff(
+  public ResponseEntity&lt;UpsertResponse&lt;CourseStaff&gt;&gt; postCourseStaff(
       @Parameter(name = &quot;firstName&quot;) @RequestParam String firstName,
       @Parameter(name = &quot;lastName&quot;) @RequestParam String lastName,
       @Parameter(name = &quot;email&quot;) @RequestParam String email,
@@ -65,13 +65,13 @@ import org.springframework.web.bind.annotation.*;
     CourseStaff courseStaff =
 <span class="fc" id="L66">        CourseStaff.builder().firstName(firstName).lastName(lastName).email(email.strip()).build();</span>
 
-<span class="fc" id="L68">    StaffUpsertResponse upsertResponse = upsertStaff(courseStaff, course);</span>
-<span class="fc" id="L69">    courseStaff = courseStaffRepository.save(upsertResponse.courseStaff());</span>
+<span class="fc" id="L68">    UpsertResponse&lt;CourseStaff&gt; upsertResponse = upsertStaff(courseStaff, course);</span>
+<span class="fc" id="L69">    courseStaff = courseStaffRepository.save(upsertResponse.entity());</span>
 <span class="fc" id="L70">    updateUserService.attachUserToCourseStaff(courseStaff);</span>
 <span class="fc" id="L71">    return ResponseEntity.ok(upsertResponse);</span>
   }
 
-  public static StaffUpsertResponse upsertStaff(CourseStaff staff, Course course) {
+  public static UpsertResponse&lt;CourseStaff&gt; upsertStaff(CourseStaff staff, Course course) {
 <span class="fc" id="L75">    String convertedEmail = CanonicalFormConverter.convertToValidEmail(staff.getEmail()).strip();</span>
 <span class="fc" id="L76">    Optional&lt;CourseStaff&gt; existingStaffByEmail =</span>
 <span class="fc" id="L77">        course.getCourseStaff().stream()</span>
@@ -81,7 +81,7 @@ import org.springframework.web.bind.annotation.*;
 <span class="fc" id="L81">      CourseStaff existingStaffObj = existingStaffByEmail.get();</span>
 <span class="fc" id="L82">      existingStaffObj.setFirstName(staff.getFirstName());</span>
 <span class="fc" id="L83">      existingStaffObj.setLastName(staff.getLastName());</span>
-<span class="fc" id="L84">      return new StaffUpsertResponse(InsertStatus.UPDATED, existingStaffObj);</span>
+<span class="fc" id="L84">      return new UpsertResponse&lt;&gt;(InsertStatus.UPDATED, existingStaffObj);</span>
     } else {
 <span class="fc" id="L86">      staff.setCourse(course);</span>
 <span class="fc" id="L87">      staff.setEmail(convertedEmail);</span>
@@ -92,7 +92,7 @@ import org.springframework.web.bind.annotation.*;
       } else {
 <span class="fc" id="L93">        staff.setOrgStatus(OrgStatus.PENDING);</span>
       }
-<span class="fc" id="L95">      return new StaffUpsertResponse(InsertStatus.INSERTED, staff);</span>
+<span class="fc" id="L95">      return new UpsertResponse&lt;&gt;(InsertStatus.INSERTED, staff);</span>
     }
   }
 
