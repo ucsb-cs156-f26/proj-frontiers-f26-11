@@ -8,6 +8,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.ucsb.cs156.frontiers.ControllerTestCase;
 import edu.ucsb.cs156.frontiers.annotations.WithInstructorCoursePermissions;
@@ -15,7 +16,7 @@ import edu.ucsb.cs156.frontiers.entities.*;
 import edu.ucsb.cs156.frontiers.enums.InsertStatus;
 import edu.ucsb.cs156.frontiers.enums.OrgStatus;
 import edu.ucsb.cs156.frontiers.enums.School;
-import edu.ucsb.cs156.frontiers.models.StaffUpsertResponse;
+import edu.ucsb.cs156.frontiers.models.UpsertResponse;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.services.CurrentUserService;
@@ -124,9 +125,10 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     assertEquals(OrgStatus.PENDING, courseStaffSaved.getOrgStatus());
 
     String responseString = response.getResponse().getContentAsString();
-    StaffUpsertResponse upsertResponse =
-        mapper.readValue(responseString, StaffUpsertResponse.class);
+    UpsertResponse<CourseStaff> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<CourseStaff>>() {});
     assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
+    assertEquals("Chris", upsertResponse.entity().getFirstName());
   }
 
   @Test
@@ -214,8 +216,8 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     // assert
 
     String responseString = response.getResponse().getContentAsString();
-    StaffUpsertResponse upsertResponse =
-        mapper.readValue(responseString, StaffUpsertResponse.class);
+    UpsertResponse<CourseStaff> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<CourseStaff>>() {});
     assertEquals(InsertStatus.UPDATED, upsertResponse.insertStatus());
     verify(courseRepository, times(1)).findById(eq(1L));
     verify(courseStaffRepository, times(1)).save(eq(expectedSaved));
@@ -259,8 +261,8 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(updateUserService, times(1)).attachUserToCourseStaff(eq(csUmail));
 
     String responseString = response.getResponse().getContentAsString();
-    StaffUpsertResponse upsertResponse =
-        mapper.readValue(responseString, StaffUpsertResponse.class);
+    UpsertResponse<CourseStaff> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<CourseStaff>>() {});
     assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
@@ -313,8 +315,8 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(updateUserService).attachUserToCourseStaff(any(CourseStaff.class));
 
     String responseString = response.getResponse().getContentAsString();
-    StaffUpsertResponse upsertResponse =
-        mapper.readValue(responseString, StaffUpsertResponse.class);
+    UpsertResponse<CourseStaff> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<CourseStaff>>() {});
     assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
@@ -367,8 +369,8 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(updateUserService).attachUserToCourseStaff(any(CourseStaff.class));
 
     String responseString = response.getResponse().getContentAsString();
-    StaffUpsertResponse upsertResponse =
-        mapper.readValue(responseString, StaffUpsertResponse.class);
+    UpsertResponse<CourseStaff> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<CourseStaff>>() {});
     assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
@@ -420,8 +422,8 @@ public class CourseStaffControllerTests extends ControllerTestCase {
     verify(courseStaffRepository, times(1)).save(eq(cs2));
 
     String responseString = response.getResponse().getContentAsString();
-    StaffUpsertResponse upsertResponse =
-        mapper.readValue(responseString, StaffUpsertResponse.class);
+    UpsertResponse<CourseStaff> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<CourseStaff>>() {});
     assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
