@@ -340,7 +340,7 @@ export default function InstructorCourseShowPage({
         )}
         {showCatmeTab && (
           <Tab eventKey={"catme"} title={"CATME"} className="pt-2">
-            <CatmeTabComponent testIdPrefix={testId} />
+            <CatmeTabComponent courseId={courseId} testIdPrefix={testId} />
           </Tab>
         )}
         {showSettingsTab && (
