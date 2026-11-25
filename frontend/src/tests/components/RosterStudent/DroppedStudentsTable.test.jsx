@@ -272,4 +272,34 @@ describe("DroppedStudentsTable tests", () => {
       ).toHaveTextContent("0100"),
     );
   });
+  test("shows the raw section value and does not fetch sections by default", async () => {
+    // If translation were (wrongly) on by default, this would translate "0100" to "Tue 9:00am"
+    axiosMock
+      .onGet("/api/courses/7/sections")
+      .reply(200, sectionsFixtures.threeSections);
+
+    const freshQueryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={freshQueryClient}>
+        <DroppedStudentsTable
+          students={rosterStudentFixtures.threeStudents}
+          courseId={7}
+          // translateSections intentionally omitted: tests the default
+        />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("DroppedStudentsTable-cell-row-0-col-section"),
+      ).toHaveTextContent("0100"),
+    );
+    expect(
+      screen.getByTestId("DroppedStudentsTable-cell-row-0-col-section"),
+    ).not.toHaveTextContent("Tue 9:00am");
+    expect(axiosMock.history.get.length).toEqual(0);
+  });
 });
