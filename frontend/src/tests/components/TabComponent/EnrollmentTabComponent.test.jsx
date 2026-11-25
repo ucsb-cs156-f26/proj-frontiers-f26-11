@@ -483,7 +483,7 @@ describe("EnrollmentTabComponent Tests", () => {
     });
     const postResponse = {
       insertStatus: "REJECTED",
-      rosterStudent: rosterStudentFixtures.oneStudent[0],
+      entity: rosterStudentFixtures.oneStudent[0],
     };
 
     axiosMock
