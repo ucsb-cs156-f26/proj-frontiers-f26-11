@@ -8,6 +8,7 @@ import { currentUserFixtures } from "fixtures/currentUserFixtures";
 import axios from "axios";
 import AxiosMockAdapter from "axios-mock-adapter";
 import { expect, vi } from "vitest";
+import * as sectionsUtils from "main/utils/sectionsUtils";
 
 const queryClient = new QueryClient();
 const axiosMock = new AxiosMockAdapter(axios);
@@ -369,9 +370,7 @@ describe("RosterStudentTable tests", () => {
       </QueryClientProvider>,
     );
 
-    const pageSizeSelect = screen.getByTestId(
-      `${testId}-pageSizeSelect`,
-    );
+    const pageSizeSelect = screen.getByTestId(`${testId}-pageSizeSelect`);
 
     expect(pageSizeSelect.style.width).toBe("auto");
   });
@@ -527,32 +526,29 @@ describe("RosterStudentTable tests", () => {
     ).not.toHaveTextContent("Tue 9:00am");
   });
 
-  test("defaults translateSections to false when the prop is omitted", async () => {
+  test("passes false to useSectionLabels when translateSections is omitted", () => {
     const currentUser = currentUserFixtures.adminUser;
-    axiosMock
-      .onGet("/api/courses/7/sections")
-      .reply(200, sectionsFixtures.threeSections);
+    const useSectionLabelsSpy = vi
+      .spyOn(sectionsUtils, "useSectionLabels")
+      .mockReturnValue((section) => section);
 
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
-          <RosterStudentTable
-            students={rosterStudentFixtures.threeStudents}
-            currentUser={currentUser}
-            courseId={7}
-          />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    );
+    try {
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <RosterStudentTable
+              students={rosterStudentFixtures.threeStudents}
+              currentUser={currentUser}
+              courseId={7}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
 
-    const sectionCell = screen.getByTestId(
-      `${testId}-cell-row-0-col-section`,
-    );
-
-    await waitFor(() => {
-      expect(sectionCell).toHaveTextContent("0100");
-      expect(sectionCell).not.toHaveTextContent("Tue 9:00am");
-    });
+      expect(useSectionLabelsSpy).toHaveBeenCalledWith(7, false);
+    } finally {
+      useSectionLabelsSpy.mockRestore();
+    }
   });
 
   test("shows the translated section label when translateSections is enabled", async () => {
