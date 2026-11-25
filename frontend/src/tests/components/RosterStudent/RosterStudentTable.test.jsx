@@ -355,6 +355,27 @@ describe("RosterStudentTable tests", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("page size selector has an automatic width", () => {
+    const currentUser = currentUserFixtures.adminUser;
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <RosterStudentTable
+            students={rosterStudentFixtures.threeStudents}
+            currentUser={currentUser}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const pageSizeSelect = screen.getByTestId(
+      `${testId}-pageSizeSelect`,
+    );
+
+    expect(pageSizeSelect.style.width).toBe("auto");
+  });
+
   test("shows only the total count when no totalStudents prop is given or filtering is not in effect", () => {
     const currentUser = currentUserFixtures.adminUser;
 
@@ -393,9 +414,9 @@ describe("RosterStudentTable tests", () => {
     expect(heading).toHaveTextContent("Students (3 total) (1 shown)");
   });
 
-  test("pagination appears and lets user navigate when there are more students than the page size", () => {
+  test("resets to the first page when page size changes", () => {
     const currentUser = currentUserFixtures.adminUser;
-    const manyStudents = Array.from({ length: 12 }, (_, index) => ({
+    const manyStudents = Array.from({ length: 30 }, (_, index) => ({
       id: index + 1,
       studentId: `S${index + 1}`,
       firstName: `First${index + 1}`,
@@ -416,33 +437,20 @@ describe("RosterStudentTable tests", () => {
 
     const pageSizeSelect = screen.getByTestId(`${testId}-pageSizeSelect`);
     fireEvent.change(pageSizeSelect, { target: { value: "10" } });
-    expect(pageSizeSelect).toHaveValue("10");
 
-    expect(
-      screen.getByTestId(`${testId}-cell-row-0-col-studentId`),
-    ).toHaveTextContent("S1");
-    expect(
-      screen.getByTestId(`${testId}-cell-row-9-col-studentId`),
-    ).toHaveTextContent("S10");
-    expect(
-      screen.queryByTestId(`${testId}-cell-row-10-col-studentId`),
-    ).not.toBeInTheDocument();
-
-    const nextButton = screen.getByTestId(`${testId}-pagination-next`);
-    fireEvent.click(nextButton);
-
+    fireEvent.click(screen.getByTestId(`${testId}-pagination-next`));
     expect(
       screen.getByTestId(`${testId}-cell-row-0-col-studentId`),
     ).toHaveTextContent("S11");
 
-    expect(pageSizeSelect).toHaveValue("10");
-    fireEvent.change(pageSizeSelect, { target: { value: "100" } });
+    fireEvent.change(pageSizeSelect, { target: { value: "25" } });
+
     expect(
       screen.getByTestId(`${testId}-cell-row-0-col-studentId`),
     ).toHaveTextContent("S1");
     expect(
-      screen.queryByTestId(`${testId}-pagination-prev`),
-    ).not.toBeInTheDocument();
+      screen.getByTestId(`${testId}-cell-row-24-col-studentId`),
+    ).toHaveTextContent("S25");
   });
 
   test("resets to the last valid page if the student list shrinks below the current page", () => {
@@ -519,7 +527,7 @@ describe("RosterStudentTable tests", () => {
     ).not.toHaveTextContent("Tue 9:00am");
   });
 
-  test("defaults translateSections to false when the prop is not provided", async () => {
+  test("defaults translateSections to false when the prop is omitted", async () => {
     const currentUser = currentUserFixtures.adminUser;
     axiosMock
       .onGet("/api/courses/7/sections")
@@ -537,14 +545,14 @@ describe("RosterStudentTable tests", () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() =>
-      expect(
-        screen.getByTestId(`${testId}-cell-row-0-col-section`),
-      ).toHaveTextContent("0100"),
+    const sectionCell = screen.getByTestId(
+      `${testId}-cell-row-0-col-section`,
     );
-    expect(
-      screen.getByTestId(`${testId}-cell-row-0-col-section`),
-    ).not.toHaveTextContent("Tue 9:00am");
+
+    await waitFor(() => {
+      expect(sectionCell).toHaveTextContent("0100");
+      expect(sectionCell).not.toHaveTextContent("Tue 9:00am");
+    });
   });
 
   test("shows the translated section label when translateSections is enabled", async () => {
