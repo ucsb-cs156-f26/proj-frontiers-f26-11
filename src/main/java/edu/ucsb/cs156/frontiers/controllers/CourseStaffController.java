@@ -5,7 +5,7 @@ import edu.ucsb.cs156.frontiers.entities.*;
 import edu.ucsb.cs156.frontiers.enums.InsertStatus;
 import edu.ucsb.cs156.frontiers.enums.OrgStatus;
 import edu.ucsb.cs156.frontiers.errors.EntityNotFoundException;
-import edu.ucsb.cs156.frontiers.models.StaffUpsertResponse;
+import edu.ucsb.cs156.frontiers.models.UpsertResponse;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
 import edu.ucsb.cs156.frontiers.repositories.CourseStaffRepository;
 import edu.ucsb.cs156.frontiers.services.*;
@@ -48,7 +48,7 @@ public class CourseStaffController extends ApiController {
   @Operation(summary = "Add a staff member to a course")
   @PreAuthorize("@CourseSecurity.hasInstructorPermissions(#root, #courseId)")
   @PostMapping("/post")
-  public ResponseEntity<StaffUpsertResponse> postCourseStaff(
+  public ResponseEntity<UpsertResponse<CourseStaff>> postCourseStaff(
       @Parameter(name = "firstName") @RequestParam String firstName,
       @Parameter(name = "lastName") @RequestParam String lastName,
       @Parameter(name = "email") @RequestParam String email,
@@ -65,13 +65,13 @@ public class CourseStaffController extends ApiController {
     CourseStaff courseStaff =
         CourseStaff.builder().firstName(firstName).lastName(lastName).email(email.strip()).build();
 
-    StaffUpsertResponse upsertResponse = upsertStaff(courseStaff, course);
-    courseStaff = courseStaffRepository.save(upsertResponse.courseStaff());
+    UpsertResponse<CourseStaff> upsertResponse = upsertStaff(courseStaff, course);
+    courseStaff = courseStaffRepository.save(upsertResponse.entity());
     updateUserService.attachUserToCourseStaff(courseStaff);
     return ResponseEntity.ok(upsertResponse);
   }
 
-  public static StaffUpsertResponse upsertStaff(CourseStaff staff, Course course) {
+  public static UpsertResponse<CourseStaff> upsertStaff(CourseStaff staff, Course course) {
     String convertedEmail = CanonicalFormConverter.convertToValidEmail(staff.getEmail()).strip();
     Optional<CourseStaff> existingStaffByEmail =
         course.getCourseStaff().stream()
@@ -81,7 +81,7 @@ public class CourseStaffController extends ApiController {
       CourseStaff existingStaffObj = existingStaffByEmail.get();
       existingStaffObj.setFirstName(staff.getFirstName());
       existingStaffObj.setLastName(staff.getLastName());
-      return new StaffUpsertResponse(InsertStatus.UPDATED, existingStaffObj);
+      return new UpsertResponse<>(InsertStatus.UPDATED, existingStaffObj);
     } else {
       staff.setCourse(course);
       staff.setEmail(convertedEmail);
@@ -92,7 +92,7 @@ public class CourseStaffController extends ApiController {
       } else {
         staff.setOrgStatus(OrgStatus.PENDING);
       }
-      return new StaffUpsertResponse(InsertStatus.INSERTED, staff);
+      return new UpsertResponse<>(InsertStatus.INSERTED, staff);
     }
   }
 

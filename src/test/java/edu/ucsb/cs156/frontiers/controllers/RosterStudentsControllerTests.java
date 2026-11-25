@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.ucsb.cs156.frontiers.ControllerTestCase;
 import edu.ucsb.cs156.frontiers.annotations.WithInstructorCoursePermissions;
@@ -146,8 +147,10 @@ public class RosterStudentsControllerTests extends ControllerTestCase {
     verify(updateUserService, times(1)).attachUserToRosterStudent(eq(rs1));
 
     String responseString = response.getResponse().getContentAsString();
-    UpsertResponse upsertResponse = mapper.readValue(responseString, UpsertResponse.class);
+    UpsertResponse<RosterStudent> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<RosterStudent>>() {});
     assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
+    assertEquals("Chris", upsertResponse.entity().getFirstName());
   }
 
   /** Test the POST endpoint to make sure emails are sanitized when posting */
@@ -180,7 +183,8 @@ public class RosterStudentsControllerTests extends ControllerTestCase {
     verify(updateUserService, times(1)).attachUserToRosterStudent(eq(rs1));
 
     String responseString = response.getResponse().getContentAsString();
-    UpsertResponse upsertResponse = mapper.readValue(responseString, UpsertResponse.class);
+    UpsertResponse<RosterStudent> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<RosterStudent>>() {});
     assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
@@ -225,7 +229,8 @@ public class RosterStudentsControllerTests extends ControllerTestCase {
     verify(updateUserService, times(1)).attachUserToRosterStudent(eq(rsUmail));
 
     String responseString = response.getResponse().getContentAsString();
-    UpsertResponse upsertResponse = mapper.readValue(responseString, UpsertResponse.class);
+    UpsertResponse<RosterStudent> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<RosterStudent>>() {});
     assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
@@ -265,7 +270,8 @@ public class RosterStudentsControllerTests extends ControllerTestCase {
     assertEquals(OrgStatus.PENDING, rosterStudentSaved.getOrgStatus());
 
     String responseString = response.getResponse().getContentAsString();
-    UpsertResponse upsertResponse = mapper.readValue(responseString, UpsertResponse.class);
+    UpsertResponse<RosterStudent> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<RosterStudent>>() {});
     assertEquals(InsertStatus.INSERTED, upsertResponse.insertStatus());
   }
 
@@ -1977,7 +1983,8 @@ public class RosterStudentsControllerTests extends ControllerTestCase {
     // assert
 
     String responseString = response.getResponse().getContentAsString();
-    UpsertResponse upsertResponse = mapper.readValue(responseString, UpsertResponse.class);
+    UpsertResponse<RosterStudent> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<RosterStudent>>() {});
     assertEquals(InsertStatus.UPDATED, upsertResponse.insertStatus());
     verify(courseRepository, times(1)).findById(eq(1L));
     verify(rosterStudentRepository, times(1)).save(eq(expectedSaved));
@@ -2031,7 +2038,8 @@ public class RosterStudentsControllerTests extends ControllerTestCase {
     // assert
 
     String responseString = response.getResponse().getContentAsString();
-    UpsertResponse upsertResponse = mapper.readValue(responseString, UpsertResponse.class);
+    UpsertResponse<RosterStudent> upsertResponse =
+        mapper.readValue(responseString, new TypeReference<UpsertResponse<RosterStudent>>() {});
     assertEquals(InsertStatus.UPDATED, upsertResponse.insertStatus());
     verify(courseRepository, times(1)).findById(eq(1L));
     verify(rosterStudentRepository, times(1)).save(eq(expectedSaved));
@@ -2461,11 +2469,11 @@ public class RosterStudentsControllerTests extends ControllerTestCase {
             .section("")
             .build();
 
-    UpsertResponse response =
+    UpsertResponse<RosterStudent> response =
         RosterStudentsController.upsertStudent(duplicate, course, RosterStatus.ROSTER);
 
     assertEquals(InsertStatus.UPDATED, response.getInsertStatus());
-    assertEquals(unsaved, response.rosterStudent());
+    assertEquals(unsaved, response.entity());
   }
 
   /**
@@ -2505,11 +2513,11 @@ public class RosterStudentsControllerTests extends ControllerTestCase {
             .section("")
             .build();
 
-    UpsertResponse response =
+    UpsertResponse<RosterStudent> response =
         RosterStudentsController.upsertStudent(conflicting, course, RosterStatus.ROSTER);
 
     assertEquals(InsertStatus.REJECTED, response.getInsertStatus());
-    assertEquals(conflicting, response.rosterStudent());
+    assertEquals(conflicting, response.entity());
   }
 
   // ---------- purgeDropped ----------
