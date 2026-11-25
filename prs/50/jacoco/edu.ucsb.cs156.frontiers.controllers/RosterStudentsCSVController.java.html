@@ -116,7 +116,7 @@ import org.springframework.web.server.ResponseStatusException;
   @PostMapping(
       value = &quot;/upload/csv&quot;,
       consumes = {&quot;multipart/form-data&quot;})
-  public ResponseEntity&lt;LoadResult&gt; uploadRosterStudentsCSV(
+  public ResponseEntity&lt;LoadResult&lt;RosterStudent&gt;&gt; uploadRosterStudentsCSV(
       @Parameter(name = &quot;courseId&quot;) @RequestParam Long courseId,
       @Parameter(name = &quot;file&quot;) @RequestParam(&quot;file&quot;) MultipartFile file)
       throws JsonProcessingException, IOException, CsvException {
@@ -148,14 +148,14 @@ import org.springframework.web.server.ResponseStatusException;
 <span class="fc" id="L148">      List&lt;String[]&gt; myEntries = csvReader.readAll();</span>
 <span class="fc bfc" id="L149" title="All 2 branches covered.">      for (String[] row : myEntries) {</span>
 <span class="fc" id="L150">        RosterStudent rosterStudent = fromCSVRow(row, sourceType);</span>
-<span class="fc" id="L151">        UpsertResponse upsertResponse =</span>
+<span class="fc" id="L151">        UpsertResponse&lt;RosterStudent&gt; upsertResponse =</span>
 <span class="fc" id="L152">            RosterStudentsController.upsertStudent(rosterStudent, course, RosterStatus.ROSTER);</span>
 <span class="fc bfc" id="L153" title="All 2 branches covered.">        if (upsertResponse.getInsertStatus() == InsertStatus.REJECTED) {</span>
-<span class="fc" id="L154">          rejectedStudents.add(upsertResponse.rosterStudent());</span>
+<span class="fc" id="L154">          rejectedStudents.add(upsertResponse.entity());</span>
         } else {
 <span class="fc" id="L156">          InsertStatus s = upsertResponse.getInsertStatus();</span>
 <span class="fc bfc" id="L157" title="All 2 branches covered.">          if (s == InsertStatus.INSERTED) {</span>
-<span class="fc" id="L158">            course.getRosterStudents().add(upsertResponse.rosterStudent());</span>
+<span class="fc" id="L158">            course.getRosterStudents().add(upsertResponse.entity());</span>
           }
 <span class="fc" id="L160">          counts[s.ordinal()]++;</span>
         }
@@ -166,8 +166,8 @@ import org.springframework.web.server.ResponseStatusException;
 <span class="fc" id="L166">          course.getRosterStudents().stream()</span>
 <span class="fc bfc" id="L167" title="All 2 branches covered.">              .filter(student -&gt; student.getRosterStatus() == RosterStatus.DROPPED)</span>
 <span class="fc" id="L168">              .toList();</span>
-<span class="fc" id="L169">      LoadResult successfulResult =</span>
-          new LoadResult(
+<span class="fc" id="L169">      LoadResult&lt;RosterStudent&gt; successfulResult =</span>
+          new LoadResult&lt;&gt;(
 <span class="fc" id="L171">              counts[InsertStatus.INSERTED.ordinal()],</span>
 <span class="fc" id="L172">              counts[InsertStatus.UPDATED.ordinal()],</span>
 <span class="fc" id="L173">              droppedStudents.size(),</span>
@@ -183,7 +183,7 @@ import org.springframework.web.server.ResponseStatusException;
 <span class="fc" id="L183">      jobService.runAsJob(job);</span>
 <span class="fc" id="L184">      return ResponseEntity.ok(successfulResult);</span>
     } else {
-<span class="fc" id="L186">      LoadResult conflictResult = new LoadResult(0, 0, 0, rejectedStudents);</span>
+<span class="fc" id="L186">      LoadResult&lt;RosterStudent&gt; conflictResult = new LoadResult&lt;&gt;(0, 0, 0, rejectedStudents);</span>
 <span class="fc" id="L187">      return ResponseEntity.status(HttpStatus.CONFLICT).body(conflictResult);</span>
     }
   }

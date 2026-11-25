@@ -81,7 +81,7 @@ public class CanvasController extends ApiController {
   @Operation(summary = &quot;Upload Roster students for Course from Canvas&quot;)
   @PreAuthorize(&quot;@CourseSecurity.hasInstructorPermissions(#root, #courseId)&quot;)
   @PostMapping(&quot;/sync/students&quot;)
-  public ResponseEntity&lt;LoadResult&gt; uploadRosterFromCanvas(
+  public ResponseEntity&lt;LoadResult&lt;RosterStudent&gt;&gt; uploadRosterFromCanvas(
       @Parameter(name = &quot;courseId&quot;) @RequestParam Long courseId) {
 
 <span class="fc" id="L87">    Course course =</span>
@@ -98,42 +98,43 @@ public class CanvasController extends ApiController {
 
 <span class="fc" id="L99">    List&lt;RosterStudent&gt; canvasStudents = canvasService.getCanvasRoster(course);</span>
 <span class="fc bfc" id="L100" title="All 2 branches covered.">    for (RosterStudent rosterStudent : canvasStudents) {</span>
-<span class="fc" id="L101">      UpsertResponse upsertResponse = upsertStudent(rosterStudent, course, RosterStatus.ROSTER);</span>
-<span class="fc bfc" id="L102" title="All 2 branches covered.">      if (upsertResponse.getInsertStatus() == InsertStatus.REJECTED) {</span>
-<span class="fc" id="L103">        rejectedStudents.add(upsertResponse.rosterStudent());</span>
+<span class="fc" id="L101">      UpsertResponse&lt;RosterStudent&gt; upsertResponse =</span>
+<span class="fc" id="L102">          upsertStudent(rosterStudent, course, RosterStatus.ROSTER);</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">      if (upsertResponse.getInsertStatus() == InsertStatus.REJECTED) {</span>
+<span class="fc" id="L104">        rejectedStudents.add(upsertResponse.entity());</span>
       } else {
-<span class="fc" id="L105">        InsertStatus s = upsertResponse.getInsertStatus();</span>
-<span class="fc bfc" id="L106" title="All 2 branches covered.">        if (s == InsertStatus.INSERTED) {</span>
-<span class="fc" id="L107">          course.getRosterStudents().add(upsertResponse.rosterStudent());</span>
+<span class="fc" id="L106">        InsertStatus s = upsertResponse.getInsertStatus();</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        if (s == InsertStatus.INSERTED) {</span>
+<span class="fc" id="L108">          course.getRosterStudents().add(upsertResponse.entity());</span>
         }
-<span class="fc" id="L109">        counts[s.ordinal()]++;</span>
+<span class="fc" id="L110">        counts[s.ordinal()]++;</span>
       }
-<span class="fc" id="L111">    }</span>
+<span class="fc" id="L112">    }</span>
 
-<span class="fc bfc" id="L113" title="All 2 branches covered.">    if (rejectedStudents.isEmpty()) {</span>
-<span class="fc" id="L114">      List&lt;RosterStudent&gt; droppedStudents =</span>
-<span class="fc" id="L115">          course.getRosterStudents().stream()</span>
-<span class="fc bfc" id="L116" title="All 2 branches covered.">              .filter(student -&gt; student.getRosterStatus() == RosterStatus.DROPPED)</span>
-<span class="fc" id="L117">              .toList();</span>
-<span class="fc" id="L118">      LoadResult successfulResult =</span>
-          new LoadResult(
-<span class="fc" id="L120">              counts[InsertStatus.INSERTED.ordinal()],</span>
-<span class="fc" id="L121">              counts[InsertStatus.UPDATED.ordinal()],</span>
-<span class="fc" id="L122">              droppedStudents.size(),</span>
-<span class="fc" id="L123">              List.of());</span>
-<span class="fc" id="L124">      rosterStudentRepository.saveAll(course.getRosterStudents());</span>
-<span class="fc" id="L125">      updateUserService.attachUsersToRosterStudents(course.getRosterStudents());</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">    if (rejectedStudents.isEmpty()) {</span>
+<span class="fc" id="L115">      List&lt;RosterStudent&gt; droppedStudents =</span>
+<span class="fc" id="L116">          course.getRosterStudents().stream()</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">              .filter(student -&gt; student.getRosterStatus() == RosterStatus.DROPPED)</span>
+<span class="fc" id="L118">              .toList();</span>
+<span class="fc" id="L119">      LoadResult&lt;RosterStudent&gt; successfulResult =</span>
+          new LoadResult&lt;&gt;(
+<span class="fc" id="L121">              counts[InsertStatus.INSERTED.ordinal()],</span>
+<span class="fc" id="L122">              counts[InsertStatus.UPDATED.ordinal()],</span>
+<span class="fc" id="L123">              droppedStudents.size(),</span>
+<span class="fc" id="L124">              List.of());</span>
+<span class="fc" id="L125">      rosterStudentRepository.saveAll(course.getRosterStudents());</span>
+<span class="fc" id="L126">      updateUserService.attachUsersToRosterStudents(course.getRosterStudents());</span>
       RemoveStudentsJob job =
-<span class="fc" id="L127">          RemoveStudentsJob.builder()</span>
-<span class="fc" id="L128">              .students(droppedStudents)</span>
-<span class="fc" id="L129">              .organizationMemberService(organizationMemberService)</span>
-<span class="fc" id="L130">              .rosterStudentRepository(rosterStudentRepository)</span>
-<span class="fc" id="L131">              .build();</span>
-<span class="fc" id="L132">      jobService.runAsJob(job);</span>
-<span class="fc" id="L133">      return ResponseEntity.ok(successfulResult);</span>
+<span class="fc" id="L128">          RemoveStudentsJob.builder()</span>
+<span class="fc" id="L129">              .students(droppedStudents)</span>
+<span class="fc" id="L130">              .organizationMemberService(organizationMemberService)</span>
+<span class="fc" id="L131">              .rosterStudentRepository(rosterStudentRepository)</span>
+<span class="fc" id="L132">              .build();</span>
+<span class="fc" id="L133">      jobService.runAsJob(job);</span>
+<span class="fc" id="L134">      return ResponseEntity.ok(successfulResult);</span>
     } else {
-<span class="fc" id="L135">      LoadResult conflictResult = new LoadResult(0, 0, 0, rejectedStudents);</span>
-<span class="fc" id="L136">      return ResponseEntity.status(HttpStatus.CONFLICT).body(conflictResult);</span>
+<span class="fc" id="L136">      LoadResult&lt;RosterStudent&gt; conflictResult = new LoadResult&lt;&gt;(0, 0, 0, rejectedStudents);</span>
+<span class="fc" id="L137">      return ResponseEntity.status(HttpStatus.CONFLICT).body(conflictResult);</span>
     }
   }
 
@@ -142,11 +143,11 @@ public class CanvasController extends ApiController {
   @PreAuthorize(&quot;@CourseSecurity.hasInstructorPermissions(#root, #courseId)&quot;)
   public List&lt;CanvasGroupSet&gt; getCanvasGroupSets(
       @Parameter(name = &quot;courseId&quot;) @RequestParam Long courseId) {
-<span class="fc" id="L145">    Course course =</span>
+<span class="fc" id="L146">    Course course =</span>
         courseRepository
-<span class="fc" id="L147">            .findById(courseId)</span>
-<span class="fc" id="L148">            .orElseThrow(() -&gt; new EntityNotFoundException(Course.class, courseId.toString()));</span>
-<span class="fc" id="L149">    return canvasService.getCanvasGroupSets(course);</span>
+<span class="fc" id="L148">            .findById(courseId)</span>
+<span class="fc" id="L149">            .orElseThrow(() -&gt; new EntityNotFoundException(Course.class, courseId.toString()));</span>
+<span class="fc" id="L150">    return canvasService.getCanvasGroupSets(course);</span>
   }
 
   @Operation(
@@ -159,20 +160,20 @@ public class CanvasController extends ApiController {
   public Job pullCanvasTeams(
       @Parameter(name = &quot;courseId&quot;) @RequestParam Long courseId,
       @Parameter(name = &quot;groupSetId&quot;) @RequestParam String groupSetId) {
-<span class="fc" id="L162">    Course course =</span>
+<span class="fc" id="L163">    Course course =</span>
         courseRepository
-<span class="fc" id="L164">            .findById(courseId)</span>
-<span class="fc" id="L165">            .orElseThrow(() -&gt; new EntityNotFoundException(Course.class, courseId.toString()));</span>
+<span class="fc" id="L165">            .findById(courseId)</span>
+<span class="fc" id="L166">            .orElseThrow(() -&gt; new EntityNotFoundException(Course.class, courseId.toString()));</span>
     PullTeamsFromCanvasJob job =
-<span class="fc" id="L167">        PullTeamsFromCanvasJob.builder()</span>
-<span class="fc" id="L168">            .course(course)</span>
-<span class="fc" id="L169">            .canvasService(canvasService)</span>
-<span class="fc" id="L170">            .teamRepository(teamRepository)</span>
-<span class="fc" id="L171">            .teamMemberRepository(teamMemberRepository)</span>
-<span class="fc" id="L172">            .courseRepository(courseRepository)</span>
-<span class="fc" id="L173">            .groupsetId(groupSetId)</span>
-<span class="fc" id="L174">            .build();</span>
-<span class="fc" id="L175">    return jobService.runAsJob(job);</span>
+<span class="fc" id="L168">        PullTeamsFromCanvasJob.builder()</span>
+<span class="fc" id="L169">            .course(course)</span>
+<span class="fc" id="L170">            .canvasService(canvasService)</span>
+<span class="fc" id="L171">            .teamRepository(teamRepository)</span>
+<span class="fc" id="L172">            .teamMemberRepository(teamMemberRepository)</span>
+<span class="fc" id="L173">            .courseRepository(courseRepository)</span>
+<span class="fc" id="L174">            .groupsetId(groupSetId)</span>
+<span class="fc" id="L175">            .build();</span>
+<span class="fc" id="L176">    return jobService.runAsJob(job);</span>
   }
 
   @Operation(
@@ -187,19 +188,19 @@ public class CanvasController extends ApiController {
   public Job pushCanvasTeams(
       @Parameter(name = &quot;courseId&quot;) @RequestParam Long courseId,
       @Parameter(name = &quot;groupSetId&quot;) @RequestParam String groupSetId) {
-<span class="fc" id="L190">    Course course =</span>
+<span class="fc" id="L191">    Course course =</span>
         courseRepository
-<span class="fc" id="L192">            .findById(courseId)</span>
-<span class="fc" id="L193">            .orElseThrow(() -&gt; new EntityNotFoundException(Course.class, courseId.toString()));</span>
+<span class="fc" id="L193">            .findById(courseId)</span>
+<span class="fc" id="L194">            .orElseThrow(() -&gt; new EntityNotFoundException(Course.class, courseId.toString()));</span>
     PushTeamsToCanvasJob job =
-<span class="fc" id="L195">        PushTeamsToCanvasJob.builder()</span>
-<span class="fc" id="L196">            .course(course)</span>
-<span class="fc" id="L197">            .groupSetId(groupSetId)</span>
-<span class="fc" id="L198">            .canvasService(canvasService)</span>
-<span class="fc" id="L199">            .courseRepository(courseRepository)</span>
-<span class="fc" id="L200">            .teamRepository(teamRepository)</span>
-<span class="fc" id="L201">            .build();</span>
-<span class="fc" id="L202">    return jobService.runAsJob(job);</span>
+<span class="fc" id="L196">        PushTeamsToCanvasJob.builder()</span>
+<span class="fc" id="L197">            .course(course)</span>
+<span class="fc" id="L198">            .groupSetId(groupSetId)</span>
+<span class="fc" id="L199">            .canvasService(canvasService)</span>
+<span class="fc" id="L200">            .courseRepository(courseRepository)</span>
+<span class="fc" id="L201">            .teamRepository(teamRepository)</span>
+<span class="fc" id="L202">            .build();</span>
+<span class="fc" id="L203">    return jobService.runAsJob(job);</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
