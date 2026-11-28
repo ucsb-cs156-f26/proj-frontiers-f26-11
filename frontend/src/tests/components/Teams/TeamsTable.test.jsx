@@ -760,6 +760,88 @@ describe("TeamsTable tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(axiosMock.history.get.length).toBe(0);
     });
+
+    test("uses the correct query key for course staff", async () => {
+      const queryClientSpecific = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            staleTime: 0,
+          },
+        },
+      });
+
+      axiosMock
+        .onGet("/api/coursestaff/course?courseId=12")
+        .reply(200, courseStaffFixtures.staffWithEachStatus);
+
+      axiosMock.onGet("/api/rosterstudents/course/12").reply(200, []);
+
+      render(
+        <QueryClientProvider client={queryClientSpecific}>
+          <MemoryRouter>
+            <TeamsTable
+              teams={[teamsFixtures.staffTeam]}
+              currentUser={currentUserFixtures.instructorUser}
+              courseId="12"
+              testIdPrefix={testId}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(
+          axiosMock.history.get.some(
+            (req) => req.url === "/api/coursestaff/course?courseId=12",
+          ),
+        ).toBe(true);
+      });
+
+      await waitFor(() => {
+        expect(
+          queryClientSpecific.getQueryData([
+            "/api/coursestaff/course?courseId=12",
+          ]),
+        ).toEqual(courseStaffFixtures.staffWithEachStatus);
+      });
+    });
+
+    test("course staff query initializes with an empty array", async () => {
+      const queryClientSpecific = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            staleTime: Infinity,
+          },
+        },
+      });
+
+      axiosMock
+        .onGet("/api/coursestaff/course?courseId=12")
+        .reply(() => new Promise(() => {}));
+
+      render(
+        <QueryClientProvider client={queryClientSpecific}>
+          <MemoryRouter>
+            <TeamsTable
+              teams={[teamsFixtures.staffTeam]}
+              currentUser={currentUserFixtures.instructorUser}
+              courseId="12"
+              testIdPrefix={testId}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(
+          queryClientSpecific.getQueryData([
+            "/api/coursestaff/course?courseId=12",
+          ]),
+        ).toStrictEqual([]);
+      });
+    });
   });
 
   test("the header buttons do not toggle the accordion", async () => {

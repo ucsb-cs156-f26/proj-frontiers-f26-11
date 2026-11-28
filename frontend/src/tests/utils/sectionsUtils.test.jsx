@@ -1,12 +1,16 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { toast } from "react-toastify";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
+import axios from "axios";
+import AxiosMockAdapter from "axios-mock-adapter";
 import {
   onSectionMutationError,
   useSectionLabels,
 } from "main/utils/sectionsUtils";
 import { sectionsFixtures } from "fixtures/sectionsFixtures";
+
+const axiosMock = new AxiosMockAdapter(axios);
 
 vi.mock("react-toastify", async (importOriginal) => {
   const mockToast = vi.fn();
@@ -87,5 +91,44 @@ describe("sectionsUtils tests", () => {
     });
 
     expect(result.current("0100")).toBe("Tue 9:00am");
+  });
+
+  test("useSectionLabels starts with an empty list of sections in the cache when disabled", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    renderHook(() => useSectionLabels(1, false), { wrapper });
+
+    expect(queryClient.getQueryData(["/api/courses/1/sections"])).toEqual([]);
+  });
+
+  test("useSectionLabels does not show an error toast when the sections cannot be loaded", async () => {
+    axiosMock.reset();
+    axiosMock.onGet("/api/courses/2/sections").reply(500);
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useSectionLabels(2, true), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(consoleErrorSpy).toHaveBeenCalled());
+    expect(consoleErrorSpy.mock.calls[0][0]).toBe(
+      "Error communicating with backend via GET on /api/courses/2/sections",
+    );
+    expect(toast).not.toHaveBeenCalled();
+    expect(result.current("0100")).toBe("0100");
+    consoleErrorSpy.mockRestore();
   });
 });

@@ -15,6 +15,7 @@ function SectionTranslator({
 }) {
   const sectionsQueryKey = `/api/courses/${courseId}/sections`;
 
+  // Stryker disable next-line ArrayDeclaration : initialData is [], so data is never undefined and this default is never used
   const { data: sections = [] } = useBackend(
     [sectionsQueryKey],
     // Stryker disable next-line StringLiteral : GET and empty string are equivalent
@@ -50,6 +51,7 @@ function SectionTranslator({
       <Form.Select
         data-testid={`${testIdPrefix}-select`}
         id={`${testIdPrefix}-select`}
+        // Stryker disable next-line StringLiteral : when section is null or undefined, "" selects the placeholder option, and any other fallback matches no option, so React selects the first option, which is the same placeholder
         value={section ?? ""}
         onChange={handleSelectChange}
       >
