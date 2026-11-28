@@ -237,6 +237,7 @@ export default function InstructorCoursesTable({
 
   const handleCloseModal = () => {
     setShowModal(false);
+    // Stryker disable next-line CallExpression : the Update Instructor form is unmounted while the modal is closed and handleShowModal always sets the course before reopening, so clearing it here cannot be observed
     setSelectedCourse(null);
   };
 

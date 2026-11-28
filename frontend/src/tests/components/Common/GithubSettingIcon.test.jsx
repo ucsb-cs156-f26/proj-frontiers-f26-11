@@ -7,6 +7,11 @@ describe("GithubSettingIcon tests", () => {
 
     const container = screen.getByTestId("GithubSettingIcon");
     expect(container).toBeInTheDocument();
+    expect(container).toHaveStyle({
+      position: "relative",
+      display: "inline-block",
+      marginRight: "12px",
+    });
 
     // Check Github icon
     const githubIcon = screen.getByTestId("GithubSettingIcon-github-icon");
