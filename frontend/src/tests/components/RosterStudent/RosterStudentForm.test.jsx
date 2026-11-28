@@ -193,6 +193,24 @@ describe("RosterStudentForm tests", () => {
     await screen.findByText(/Please enter a valid email/);
   });
 
+  test("does not render SectionTranslator by default, when translateSections is not passed", async () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <RosterStudentForm courseId={7} />
+        </Router>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByTestId(`${testId}-submit`)).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`${testId}-SectionTranslator-select`),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`${testId}-SectionTranslator-translation`),
+    ).not.toBeInTheDocument();
+  });
+
   test("does not render SectionTranslator when translateSections is false", async () => {
     render(
       <QueryClientProvider client={queryClient}>

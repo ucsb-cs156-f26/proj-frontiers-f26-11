@@ -717,4 +717,36 @@ describe("RosterStudentForm tests", () => {
     const urlInput = screen.getByTestId("URL-input");
     expect(urlInput).toHaveStyle({ width: "300px" });
   });
+  test("keeps a URL that is only seen on blur (e.g. from autofill) in the URL input", () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <RepositorySelectionForm />
+        </Router>
+      </QueryClientProvider>,
+    );
+    const urlInput = screen.getByTestId("URL-input");
+
+    urlInput.value = "https://github.com/ucsb-cs156";
+    fireEvent.blur(urlInput);
+
+    expect(screen.getByTestId("url-success-message")).toBeInTheDocument();
+    expect(urlInput).toHaveValue("https://github.com/ucsb-cs156");
+  });
+  test("keeps a name that is only seen on blur (e.g. from autofill) in the name input", () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <RepositorySelectionForm />
+        </Router>
+      </QueryClientProvider>,
+    );
+    const nameInput = screen.getByTestId("collection-name-input");
+
+    nameInput.value = "   ";
+    fireEvent.blur(nameInput);
+
+    expect(screen.getByTestId("name-error-message")).toBeInTheDocument();
+    expect(nameInput).toHaveValue("   ");
+  });
 });

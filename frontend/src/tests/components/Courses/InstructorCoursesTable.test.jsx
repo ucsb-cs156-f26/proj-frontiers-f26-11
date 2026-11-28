@@ -1350,6 +1350,63 @@ describe("InstructorCoursesTable tests", () => {
         queryKey: ["/api/courses/allForInstructors"],
       });
     });
+
+    test("Reopening the edit modal after a successful update shows the course's values, not the previously typed ones", async () => {
+      axiosMock = new AxiosMockAdapter(axios);
+      axiosMock.reset();
+      axiosMock.resetHistory();
+      axiosMock.onPut("/api/courses").reply(200, {});
+      axiosMock.onGet("/api/systemInfo/schools").reply(200, schoolList);
+
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter>
+            <InstructorCoursesTable
+              courses={coursesFixtures.severalCourses}
+              currentUser={currentUserFixtures.instructorUser}
+              testId={testId}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+
+      const editButton = screen.getByTestId(
+        `${testId}-cell-row-0-col-edit-button`,
+      );
+      fireEvent.click(editButton);
+      await screen.findByTestId("CourseModal-base");
+
+      fireEvent.change(screen.getByTestId("CourseModal-courseName"), {
+        target: { value: "Updated Course" },
+      });
+      fireEvent.change(screen.getByTestId("CourseModal-term"), {
+        target: { value: "Fall 2025" },
+      });
+      fireEvent.change(screen.getByTestId("CourseModal-school"), {
+        target: { value: "Oregon State" },
+      });
+      fireEvent.click(await screen.findByText("Oregon State"));
+      fireEvent.click(screen.getByTestId("CourseModal-submit"));
+
+      await waitFor(() => expect(axiosMock.history.put.length).toBe(1));
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("CourseModal-base"),
+        ).not.toBeInTheDocument();
+      });
+
+      fireEvent.click(
+        screen.getByTestId(`${testId}-cell-row-0-col-edit-button`),
+      );
+      await screen.findByTestId("CourseModal-base");
+
+      expect(screen.getByTestId("CourseModal-courseName")).toHaveValue(
+        coursesFixtures.severalCourses[0].courseName,
+      );
+      expect(screen.getByTestId("CourseModal-term")).toHaveValue(
+        coursesFixtures.severalCourses[0].term,
+      );
+    });
   });
 
   describe("InstructorCourseTable delete course tests", () => {
