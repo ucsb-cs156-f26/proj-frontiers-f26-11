@@ -7,6 +7,7 @@ import edu.ucsb.cs156.frontiers.errors.EntityNotFoundException;
 import edu.ucsb.cs156.frontiers.errors.NoLinkedOrganizationException;
 import edu.ucsb.cs156.frontiers.jobs.CreateStudentOrStaffRepositoriesJob;
 import edu.ucsb.cs156.frontiers.jobs.CreateTeamRepositoriesJob;
+import edu.ucsb.cs156.frontiers.jobs.DeleteRepoJob;
 import edu.ucsb.cs156.frontiers.repositories.CourseRepository;
 import edu.ucsb.cs156.frontiers.services.GithubTeamService;
 import edu.ucsb.cs156.frontiers.services.RepositoryService;
@@ -15,11 +16,14 @@ import edu.ucsb.cs156.jobs.services.JobService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @Tag(name = "Repository Controller")
 @RestController
@@ -109,5 +113,36 @@ public class RepositoryController extends ApiController {
               .build();
       return jobService.runAsJob(job);
     }
+  }
+
+  /**
+   * Fires a job that deletes every empty repository in the course's GitHub organization whose name
+   * starts with the given prefix. Repositories that contain commits are never deleted.
+   *
+   * @param courseId ID of the course whose organization is searched
+   * @param prefix only repositories whose names start with this prefix are considered
+   * @return the {@link edu.ucsb.cs156.jobs.entities.Job Job} started to delete the repos.
+   */
+  @DeleteMapping("")
+  @PreAuthorize("@CourseSecurity.hasManagePermissions(#root, #courseId)")
+  public Job deleteRepos(@RequestParam Long courseId, @RequestParam String prefix) {
+    if (prefix.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "prefix must not be blank");
+    }
+    Course course =
+        courseRepository
+            .findById(courseId)
+            .orElseThrow(() -> new EntityNotFoundException(Course.class, courseId));
+    if (course.getOrgName() == null || course.getInstallationId() == null) {
+      throw new NoLinkedOrganizationException(course.getCourseName());
+    }
+    DeleteRepoJob job =
+        DeleteRepoJob.builder()
+            .courseId(courseId)
+            .prefix(prefix)
+            .courseRepository(courseRepository)
+            .repositoryService(repositoryService)
+            .build();
+    return jobService.runAsJob(job);
   }
 }
